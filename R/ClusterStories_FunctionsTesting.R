@@ -130,7 +130,7 @@ clusterDistances <- dist(clusterData %>% select(lclzd_JobsAndPopulation_std, lcl
 
 clusterMetrics = ""
 
-getClusterMetrics <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterDistances, clusterMetrics = "", plotMetrics = TRUE, includeDescriptions = TRUE, exportOutput = TRUE, exportSignificantDigits = 3)
+getClusterMetrics <- function(clusterData, uniqueID, clusterSolutions, clusterNamesColumns = "", dataColumns, clusterDistances, clusterMetrics = "", plotMetrics = TRUE, includeDescriptions = TRUE, exportOutput = TRUE, exportSignificantDigits = 3)
 {
   ## FUNCTION - Cluster Metrics
   # Inputs:
@@ -386,7 +386,7 @@ getClusterMetrics <- function(clusterData, uniqueID, clusterSolutions, dataColum
 
 
 
-describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, exportOutput = TRUE, ifPlot = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE)
+describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNamesColumns = "", dataColumns, exportOutput = TRUE, ifPlot = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE)
 {
   ## FUNCTION - Cluster Descriptions
   # Inputs:
@@ -407,6 +407,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   # [clusterData] requires a data.frame with the following data:
   #   - [uniqueID]: a column number for the unique IDs
   #   - [clusterSolutions]: a list of which columns contain the clustering solutions (one column per solution)
+  #   - [clusterNamesColumns]: a list of names for clustering solutions (one column per solution, use [""] or [0] if no names)
   #   - [dataColumns]: a list of which columns contain the clustering data
 
   require(tidyverse)
@@ -463,7 +464,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       stop("[clusterSolutions] column numbers must be within the dimensions of [clusterData]")
     }
 
-    # Store both forms of [uniqueID] for checking overlap
+    # Store both forms of [clusterSolutions] for checking overlap
     tmp_clusterSolutions_char = names(clusterData)[clusterSolutions]
     tmp_clusterSolutions_num = clusterSolutions
 
@@ -474,7 +475,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       stop("[clusterSolutions] names must be in [clusterData] names")
     }
 
-    # Store both forms of [uniqueID] for checking overlap
+    # Store both forms of [clusterSolutions] for checking overlap
     tmp_clusterSolutions_char = clusterSolutions
     tmp_clusterSolutions_num = sapply(clusterSolutions, FUN = function(x) { which( names(clusterData) == x ) })
 
@@ -482,6 +483,65 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   {
     stop("[clusterSolutions] must be a list of numbers or strings")
   }
+
+
+  # Confirm [clusterNamesColumns] are column numbers or column names in [clusterNamesColumns]
+  if(class(clusterNamesColumns)[1] == "integer" | class(clusterNamesColumns)[1] == "numeric") # Check for [clusterNamesColumns] type
+  {
+
+    # Check if [clusterNamesColumns] are outside the dimensions of [clusterData] or are '0'
+    if(any(clusterNamesColumns > dim(clusterData)[2]) | any(clusterNamesColumns < -1))
+    {
+      stop("[clusterNamesColumns] column numbers must be within the dimensions of [clusterData]")
+    }
+
+    # Store both forms of [clusterNamesColumns] for checking overlap
+    tmp_clusterNamesColumns_char = NULL
+    tmp_clusterNamesColumns_num = NULL
+
+    for(n in clusterNamesColumns)
+    {
+      if(n == 0)
+      {
+        tmp_clusterNamesColumns_char = c(tmp_clusterNamesColumns_char, "")
+        tmp_clusterNamesColumns_num = c(tmp_clusterNamesColumns_num, 0)
+      } else
+      {
+        tmp_clusterNamesColumns_char = c(tmp_clusterNamesColumns_char, names(clusterData)[n])
+        tmp_clusterNamesColumns_num = c(tmp_clusterNamesColumns_num, n)
+      }
+    }
+
+
+  } else if(class(clusterNamesColumns)[1] == "character") # Check for [clusterNamesColumns] type
+  {
+    if( !all(clusterNamesColumns[which(clusterNamesColumns != "")] %in% names(clusterData)) )
+    {
+      stop("[clusterNamesColumns] names must be in [clusterData] names")
+    }
+
+    # Store both forms of [clusterNamesColumns] for checking overlap
+    tmp_clusterNamesColumns_char = NULL
+    tmp_clusterNamesColumns_num = NULL
+
+    for(n in clusterNamesColumns)
+    {
+      if(n == "")
+      {
+        tmp_clusterNamesColumns_char = c(tmp_clusterNamesColumns_char, "")
+        tmp_clusterNamesColumns_num = c(tmp_clusterNamesColumns_num, 0)
+      } else
+      {
+        tmp_clusterNamesColumns_char = c(tmp_clusterNamesColumns_char, n)
+        tmp_clusterNamesColumns_num = c( tmp_clusterNamesColumns_num, which(names(clusterData) == n) )
+      }
+    }
+
+  } else # Else not a numeric or character entry
+  {
+    stop("[clusterNamesColumns] must be a list of numbers or strings")
+  }
+
 
   # Confirm [dataColumns] are column numbers or column names in [clusterData]
   if(class(dataColumns)[1] == "integer") # Check for [dataColumns] type
@@ -492,7 +552,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       stop("[dataColumns] column numbers must be within the dimensions of [clusterData]")
     }
 
-    # Store both forms of [uniqueID] for checking overlap
+    # Store both forms of [dataColumns] for checking overlap
     tmp_dataColumns_char = names(clusterData)[dataColumns]
     tmp_dataColumns_num = dataColumns
 
@@ -503,7 +563,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       stop("[dataColumns] names must be in [clusterData] names")
     }
 
-    # Store both forms of [uniqueID] for checking overlap
+    # Store both forms of [dataColumns] for checking overlap
     tmp_dataColumns_char = dataColumns
     tmp_dataColumns_num = sapply(dataColumns, FUN = function(x) { which( names(clusterData) == x ) })
 
@@ -517,31 +577,43 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       c(
         tmp_uniqueID_num
         , tmp_clusterSolutions_num
+        , tmp_clusterNamesColumns_num
         , tmp_dataColumns_num
       )
   ))))
   {
-    stop("[uniqueID], [clusterSolutions], and [dataColumns] must all be mutually exclusive")
+    stop("[uniqueID], [clusterSolutions], [clusterNamesColumns] and [dataColumns] must all be mutually exclusive")
   }
 
   # Once duplicates are confirmed not to exist, store all column names in label form
   uniqueID <- tmp_uniqueID_char
   clusterSolutions <- tmp_clusterSolutions_char
+  clusterNamesColumns <- tmp_clusterNamesColumns_char
   dataColumns <- tmp_dataColumns_char
 
-  # Reorder [clusterSolutions] by number of clusters (i.e. max cluster ID by column)
+  # Subset [clusterData] to [uniqueID], [clusterSolutions], [clusterNamesColumns], and [dataColumns] only
+  clusterData <- clusterData %>% select(
+    all_of(uniqueID)
+    , all_of(clusterSolutions)
+    , all_of(clusterNamesColumns[which(clusterNamesColumns != "")])
+    , all_of(dataColumns)
+  )
+
+  # Reorder [clusterNamesColumns] and [clusterSolutions] by number of clusters (i.e. max cluster ID by column)
+  clusterNamesColumns <- clusterNamesColumns[
+      order(
+        sapply(clusterData %>% select(all_of(clusterSolutions)), max)
+        )
+    ]
+
   clusterSolutions <- clusterSolutions[
       order(
         sapply(clusterData %>% select(all_of(clusterSolutions)), max)
         )
     ]
 
-  # Subset [clusterData] to [uniqueID], [clusterSolutions], and [dataColumns] only
-  clusterData <- clusterData %>% select(
-    all_of(uniqueID)
-    , all_of(clusterSolutions)
-    , all_of(dataColumns)
-  )
+  clusterNamesColumns <- as.data.frame(t(clusterNamesColumns))
+  names(clusterNamesColumns) <- clusterSolutions
 
 
   # Begin descriptions ----------------------------------------------------
@@ -552,6 +624,40 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   for(tmp_clustSolution in clusterSolutions)
   {
     print(paste0("Generating cluster descriptions for solution [", tmp_clustSolution,"]"))
+
+    # # Set cluster names if available
+    # if(clusterNamesColumns[1, tmp_clustSolution] != "")
+    # {
+    #   # Set current cluster solution name col based on ID col
+    #   tmp_namesCol <- clusterNamesColumns[1, tmp_clustSolution]
+    #
+    #   # Initialize storage for cluster solutions names/IDs crosswalk
+    #   tmp_currentSolutionNames <- as.data.frame( matrix( , dim(unique(clusterData %>% select(all_of(tmp_clustSolution))))[1], 2 ) )
+    #   names(tmp_currentSolutionNames) <- c("ClusterID", "ClusterName")
+    #
+    #   # Confirm cluster names are unique to cluster IDs for current solution
+    #   tmp_clusterNameCheckTable <- table(clusterData[,tmp_clustSolution], clusterData[,tmp_namesCol]) # Create a table of cluster names/IDs
+    #   for(tableCol in 1:dim(tmp_clusterNameCheckTable)[1])
+    #   {
+    #     # If more than one entry is non-zero, then there is not a unique cross-tab relationship between cluster solution IDs and cluster solution names
+    #     if( length(which(tmp_clusterNameCheckTable[,tableCol] != 0)) > 1 )
+    #     {
+    #       print("[clusterSolutions] IDs must uniquely match given cluster names")
+    #       print(tmp_clusterNameCheckTable)
+    #       stop(paste0("Mismatch in [clusterSolutions] column '", tmp_clustSolution, "'"))
+    #     }
+    #     else
+    #     {
+    #       tmp_currentSolutionNames[tableCol,1] <- row.names(tmp_clusterNameCheckTable)[tableCol]
+    #       tmp_currentSolutionNames[tableCol,2] <- colnames(tmp_clusterNameCheckTable)[tableCol]
+    #     }
+    #   }
+    # }
+    # else
+    # {
+    #   tmp_currentSolutionNames <- ""
+    # }
+
 
     # Iterate over each group in the current solution
     for(tmp_currentCluster in 1:length(table(clusterData[, tmp_clustSolution])) )
@@ -798,6 +904,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     # Iterate over each cluster solution
     for(s in 1:length(tmp_clusterDescriptionsStorage))
     {
+
       # Iterate over each cluster in each solutions
       tmp_numClustersInSolution <- tmp_clusterDescriptionsStorage[[s]][[1]][[1]][1,2] # Returns second entry in first proportion table for current solution [s]
 
@@ -1001,7 +1108,10 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     }
 
     # setwd("/Users/benclaassen/Documents/_Workshop/_Code Utilities/Statistics/MultivariateClusteringPackage/TestOutput")
-    saveWorkbook(tmp_wb, paste0("clusterExample_fromDescriptionsFunction ", Sys.time(), ".xlsx"), TRUE)
+    tmp_timestamp <- gsub(":", "-", Sys.time())
+    tmp_timestamp <- gsub(" ", "_", tmp_timestamp)
+    tmp_timestamp <- gsub("\\.[0-9]+", "", tmp_timestamp)
+    saveWorkbook(tmp_wb, paste0("clusterExample_fromDescriptionsFunction ", tmp_timestamp, ".xlsx"), TRUE)
 
 # -------------------------------------------------------------------------
 
