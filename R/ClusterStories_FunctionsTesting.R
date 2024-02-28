@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2023-12-29
-# Updated: 2024-02-27
+# Updated: 2024-02-28
 # -------------------------------------------------------------------------
 
 
@@ -793,13 +793,13 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
     }
     if(exportSignificantDigits < 1)
     {
-      exportSignificantDigits = 1
+      exportSignificantDigits <- 1
     }
 
     # Set which table rows to write to
-    tmp_titleRow = 2
-    tmp_proportionRow = 4
-    tmp_descriptionRow = 7
+    tmp_titleRow <- 2
+    tmp_proportionRow <- 4
+    tmp_descriptionRow <- 7
 
     # Initialize excel file
     tmp_wb <- createWorkbook()
@@ -910,7 +910,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
 
       # Set first table column
       tmp_currentCol <- 2
-      tmp_currentPlotCol <- 2
 
       # Initialize cluster names storage
       tmp_clusterSolution_clusterNames <- as.data.frame(matrix(, tmp_numClustersInSolution, 2))
@@ -956,17 +955,14 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
           # Cluster name
           writeData(tmp_wb, tmp_worksheetName, tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,5], startCol = tmp_currentCol + 1, startRow = tmp_titleRow)
           # Cluster color
-          tmp_style_clusterColor <- createStyle(bgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
-          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_bold, cols = tmp_currentCol + 2, rows = tmp_titleRow, stack = F)
-          # writeData(, startCol = tmp_currentCol + 2, startRow = tmp_titleRow)
+          tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
+          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 2, rows = tmp_titleRow, stack = F)
         } else
         {
           # Cluster color
-          tmp_style_clusterColor <- createStyle(bgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
-          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 2, rows = tmp_titleRow, stack = F)
-          # writeData(tmp_wb, tmp_worksheetName, tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]], startCol = tmp_currentCol + 1, startRow = tmp_titleRow)
+          tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
+          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 1, rows = tmp_titleRow, stack = F)
         }
-
         # Add proportions table to worksheet
         writeData(tmp_wb, tmp_worksheetName, tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,3:4], startCol = tmp_currentCol, startRow = tmp_proportionRow)
 
@@ -1030,6 +1026,9 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
         }
 
 
+        # If any plotting, fill means table. Use this table to establish variable plot order
+HERE BRUH
+
         # If [ifMakeRadarPlots], make radar plots
         if(ifMakeRadarPlots)
         {
@@ -1037,21 +1036,48 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
           if(tmp_numClustersInSolution < 3)
           {
             writeData(tmp_wb, tmp_worksheetName, "NOTE: No radar charts can be made for less than 3 clusters", startRow = tmp_radarPlotStartRow, startCol = 2)
-          }
-          else
+          } else
           {
+            # Library for radar plots
             require(fmsb)
+
             # Get variable means by cluster for current solution
             tmp_currentSolutionMeansStorage <- as.data.frame(matrix(, length(dataColumns), (1+tmp_numClustersInSolution)))
-            names(tmp_currentSolutionMeansStorage) <- c("Variable", paste0("k=", c(1:tmp_numClustersInSolution)) )
-            tmp_currentSolutionMeansStorage[,1] <- dataColumns
+
+            # Set proper names if given
+            if( !all(tmp_clusterSolution_clusterNames == "") )
+            {
+              names(tmp_currentSolutionMeansStorage) <- c("Variable",  tmp_clusterSolution_clusterNames[order(tmp_clusterSolution_clusterNames[,2]),1])
+            } else
+            {
+              names(tmp_currentSolutionMeansStorage) <- c("Variable", paste0("k=", c(1:tmp_numClustersInSolution)) )
+            }
+
+            # Set first col to variable names
+            tmp_currentSolutionMeansStorage[,1] <- sort(dataColumns)
 
             for(i in 1:tmp_numClustersInSolution)
             {
-              tmp_currentSolutionMeansStorage[,i+1] <- tmp_clusterDescriptionsStorage[[s]][[i]][[2]][,2]
+              tmp_meansData <- tmp_clusterDescriptionsStorage[[s]][[i]][[2]][,c(1:2)]
+              tmp_meansData[order(tmp_meansData[,1]),2]
+              tmp_currentSolutionMeansStorage[,i+1] <- tmp_meansData[order(tmp_meansData[,1]),2]
+
+              # TESTING
+              # t(as.data.frame(clusterData %>% group_by(borough) %>% summarize(
+              #   meanDem = mean(bg_percVotesDem, na.rm = T)
+              #   , meanOther = mean(bg_percVotesOther, na.rm = T)
+              #   , meanRep = mean(bg_percVotesRep, na.rm = T)
+              #   , meanAge = mean(MedianAge, na.rm = T)
+              #   , meanIncome = mean(MedianHHIncome, na.rm = T)
+              #   , meanBache = mean(percBachelorsPlus, na.rm = T)
+              #   , meanDrove = mean(percDroveToWork, na.rm = T)
+              #   , meanFamilyPov = mean(percFamilyHHinPoverty, na.rm = T)
+              #   , meanHHPov = mean(percHHinPoverty, na.rm = T)
+              #   , meanMarried = mean(percMarriedHHs, na.rm = T)
+              #   )))
             }
 
-            for(p in 1:length(dataColumns))
+            for(p in 1:dim(tmp_currentSolutionMeansStorage)[1])
             {
               tmp_plotDat <- tmp_currentSolutionMeansStorage[p,-1]
               tmp_maxDat <- as.data.frame( matrix(max(tmp_plotDat), 1, (dim(tmp_plotDat)[2])) )
@@ -1070,10 +1096,11 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
               radarchartcirc(
                 tmp_plotDat
                 , cglty = 3
-                , caxislabels = seq(from = floor(tmp_plotDat[2,1]), to = ceiling(tmp_plotDat[1,1]), length.out = 5)
-                , title = dataColumns[p]
+                , caxislabels = round(seq(from = tmp_plotDat[2,1], to = tmp_plotDat[1,1], length.out = 5),3)
+                , title = tmp_currentSolutionMeansStorage[p,1]
                 , axistype = 1
                 , axislabcol = "#222222"
+                , pcol = 'black'
                 # , paxislabels
               )
 
@@ -1086,8 +1113,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
 
             }
 
-            # IF not last cluster in solution, iterate table columns
-            tmp_currentPlotCol <- tmp_currentPlotCol + 6
           } # End multivar radar plots
         } # End [ifMakeRadarPlots]
 
@@ -1097,7 +1122,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
           # If there are more clusters than colors assigned (max of 35), then print warning and change plot row to account for it
           if(tmp_ifTooManyClustersForColors)
           {
-            writeData(tmp_wb, tmp_worksheetName, "NOTE: The number of clusters exceeds the plotting capability (35 cluster maximum). All clusters above this number are not presented.", startRow = tmp_distrPlotStartRow, startCol = 2)
+            writeData(tmp_wb, tmp_worksheetName, "NOTE: The number of clusters exceeds the plotting capability (35 cluster maximum). Clusters above this number are excluded from plots.", startRow = tmp_distrPlotStartRow, startCol = 2)
             tmp_distrPlotStartRow = tmp_distrPlotStartRow + 2
           }
 
@@ -1117,40 +1142,82 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
           # tmp_currentPlotCol <- tmp_currentPlotCol + 6
 
           # Iterate over each variable
-          for(tmp_currentDistrPlotVariable in dataColumns)
+          for(tmp_currentDistrPlotVariableNumber in 1:length(dataColumns))
           {
-            # Initialize density storage
-            # Iterate over each cluster within the current solution [tmp_plotClusterSolution] and store the densities
-            for()
+
+            # Add variable title for plot
+            writeData(tmp_wb, tmp_worksheetName, dataColumns[tmp_currentDistrPlotVariableNumber], startRow = tmp_distrPlotStartRow, startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1)
+
+            # Iterate over clusters to find max density
+            tmp_maxDensity_y <- 0
+            tmp_maxDensity_x <- 0
+            tmp_densityTestData <- clusterData %>% select(all_of(tmp_plotClusterSolution), all_of(dataColumns[tmp_currentDistrPlotVariableNumber]))
+
+            for(tmp_clustInCurrentSolution in 1:tmp_numClustersInSolution)
             {
-              # Create density
-              # Store densitiy x and y values
+              # Check density if cluster has 2 or more observations
+              if( dim(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), ])[1] > 1 )
+              {
+                tmp_clusterDen <- density(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), dataColumns[tmp_currentDistrPlotVariableNumber]])
+                if(max(tmp_clusterDen$x) > tmp_maxDensity_x) {tmp_maxDensity_x = max(tmp_clusterDen$x)}
+                if(max(tmp_clusterDen$y) > tmp_maxDensity_y) {tmp_maxDensity_y = max(tmp_clusterDen$y)}
+              }
             }
 
-            # Set maxes of density storage
+            # If all clusters have a single value, set [tmp_maxDensity] to 1
+            if(tmp_maxDensity_y == 0)
+            {
+              tmp_maxDensity_y = 1
+            }
+            if(tmp_maxDensity_x == 0)
+            {
+              tmp_maxDensity_x = 1
+            }
 
-            # Iterate over each cluster for the current and plot the densities
-            for()
+            # Iterate over each cluster for the current variable and plot the densities
+            for(tmp_clustInCurrentSolution in 1:tmp_numClustersInSolution)
             {
               # If not first, set plot to add new data
-              # Plot density
+              if(tmp_clustInCurrentSolution > 1)
+              {
+                par(new = TRUE)
+              }
+
+              # If cluster has 2 or more observations then plot density, else only plot mean
+              if( dim(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), ])[1] > 1 )
+              {
+                # Set temporary density
+                tmp_clusterDen <- density(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), dataColumns[tmp_currentDistrPlotVariableNumber]])
+
+                # Plot density
+                plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(0, tmp_maxDensity_y), xlim = c(0,tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = "Percentile of Observations", ylab = "Relative Density")#, main = dataColumns[tmp_currentDistrPlotVariableNumber])
+              }
+
               # Add mean
-              # Add text for mean
+              tmp_varMean <- mean(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), dataColumns[tmp_currentDistrPlotVariableNumber]])
+              abline(v = tmp_varMean, lty = 2, col = tmp_clusterColors[tmp_clustInCurrentSolution])
+
+              # Add text for mean, include cluster name if present
+              if( all(tmp_clusterSolution_clusterNames == "") )
+              {
+                # text(tmp_varMean, tmp_maxDensity*0.9, labels = paste0("k=", tmp_clustInCurrentSolution, "; mean: ", round(tmp_varMean,3)), col = tmp_clusterColors[tmp_clustInCurrentSolution], pos = 4)
+                mtext(text = paste0("k=", tmp_clustInCurrentSolution, "; mean: ", round(tmp_varMean,3)), col = tmp_clusterColors[tmp_clustInCurrentSolution], side = 3, at = tmp_varMean, las = 2)
+              } else
+              {
+                # mtext(tmp_varMean, tmp_maxDensity*1.2, labels = paste0(, "; mean: ", round(tmp_varMean,3)))
+                mtext(text = paste0(, "; mean: ", round(tmp_varMean,3)), col = tmp_clusterColors[tmp_clustInCurrentSolution], side = 3, at = tmp_varMean, las = 2)
+              }
             }
 
             # Add variable plot to workbook
+            insertPlot(tmp_wb, tmp_worksheetName, width = 6, height = 4
+              , startRow = tmp_distrPlotStartRow + 2
+              , startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1
+              , fileType = "png", units = "in", dpi = 300)
 
-          }
-        #
-        #
-        #   # for(tmp_currentPlotVariable in 1:max( clusterData[,tmp_plotClusterSolution] ) )
-        #   # {
-        #   #   # Pull out variables in [dataColumns] for current cluster ID within the current cluster solution
-        #   #   # tmp_inClusterData <- clusterData[which(clusterData[,tmp_plotClusterSolution] == tmp_currentPlotCluster), ] %>% select(all_of(tmp_plotClusterSolution), all_of(dataColumns))
-        #   #   # table(tmp_inClusterData[,tmp_plotClusterSolution])
-        #   #   tmp_inClusterData <- clusterData[which(clusterData[,tmp_plotClusterSolution] == tmp_currentPlotCluster), ] %>% select(all_of(dataColumns))
-        #   #   tmp_inClusterData
-        # } # End [ifMakeDistributionPlots]
+          } # End loop iterating over all variables
+
+        } # End [ifMakeDistributionPlots]
 
       } # End plots for export
 
@@ -1167,3 +1234,4 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
 
   return(tmp_clusterDescriptionsStorage)
 } # END FUNCTION - [describeClusters] #
+
