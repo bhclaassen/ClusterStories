@@ -1025,9 +1025,44 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
           tmp_distrPlotColIncrease = 6 # Number of cols to match 6 inches of plot width plus a margin
         }
 
+        # If any plotting, fill means table. Use this table to establish variable plot order as well
+        # Initialize variable means by cluster for current solution
+        tmp_currentSolutionMeansStorage <- as.data.frame(matrix(, length(dataColumns), (1+tmp_numClustersInSolution)))
 
-        # If any plotting, fill means table. Use this table to establish variable plot order
-HERE BRUH
+        # Set proper names if given
+        if( !all(tmp_clusterSolution_clusterNames == "") )
+        {
+          names(tmp_currentSolutionMeansStorage) <- c("Variable",  tmp_clusterSolution_clusterNames[order(tmp_clusterSolution_clusterNames[,2]),1])
+        } else
+        {
+          names(tmp_currentSolutionMeansStorage) <- c("Variable", paste0("k=", c(1:tmp_numClustersInSolution)) )
+        }
+
+        # Set first col to variable names
+        tmp_currentSolutionMeansStorage[,1] <- sort(dataColumns)
+
+        for(i in 1:tmp_numClustersInSolution)
+        {
+          # Get means from storage
+          tmp_meansData <- tmp_clusterDescriptionsStorage[[s]][[i]][[2]][,c(1:2)]
+          tmp_meansData[order(tmp_meansData[,1]),]
+          # Write sorted data to i+1 to account for labels column
+          tmp_currentSolutionMeansStorage[,i+1] <- tmp_meansData[order(tmp_meansData[,1]),2]
+
+          # TESTING
+          # t(as.data.frame(clusterData %>% group_by(borough) %>% summarize(
+          #   meanDem = mean(bg_percVotesDem, na.rm = T)
+          #   , meanOther = mean(bg_percVotesOther, na.rm = T)
+          #   , meanRep = mean(bg_percVotesRep, na.rm = T)
+          #   , meanAge = mean(MedianAge, na.rm = T)
+          #   , meanIncome = mean(MedianHHIncome, na.rm = T)
+          #   , meanBache = mean(percBachelorsPlus, na.rm = T)
+          #   , meanDrove = mean(percDroveToWork, na.rm = T)
+          #   , meanFamilyPov = mean(percFamilyHHinPoverty, na.rm = T)
+          #   , meanHHPov = mean(percHHinPoverty, na.rm = T)
+          #   , meanMarried = mean(percMarriedHHs, na.rm = T)
+          #   )))
+        }
 
         # If [ifMakeRadarPlots], make radar plots
         if(ifMakeRadarPlots)
@@ -1040,42 +1075,6 @@ HERE BRUH
           {
             # Library for radar plots
             require(fmsb)
-
-            # Get variable means by cluster for current solution
-            tmp_currentSolutionMeansStorage <- as.data.frame(matrix(, length(dataColumns), (1+tmp_numClustersInSolution)))
-
-            # Set proper names if given
-            if( !all(tmp_clusterSolution_clusterNames == "") )
-            {
-              names(tmp_currentSolutionMeansStorage) <- c("Variable",  tmp_clusterSolution_clusterNames[order(tmp_clusterSolution_clusterNames[,2]),1])
-            } else
-            {
-              names(tmp_currentSolutionMeansStorage) <- c("Variable", paste0("k=", c(1:tmp_numClustersInSolution)) )
-            }
-
-            # Set first col to variable names
-            tmp_currentSolutionMeansStorage[,1] <- sort(dataColumns)
-
-            for(i in 1:tmp_numClustersInSolution)
-            {
-              tmp_meansData <- tmp_clusterDescriptionsStorage[[s]][[i]][[2]][,c(1:2)]
-              tmp_meansData[order(tmp_meansData[,1]),2]
-              tmp_currentSolutionMeansStorage[,i+1] <- tmp_meansData[order(tmp_meansData[,1]),2]
-
-              # TESTING
-              # t(as.data.frame(clusterData %>% group_by(borough) %>% summarize(
-              #   meanDem = mean(bg_percVotesDem, na.rm = T)
-              #   , meanOther = mean(bg_percVotesOther, na.rm = T)
-              #   , meanRep = mean(bg_percVotesRep, na.rm = T)
-              #   , meanAge = mean(MedianAge, na.rm = T)
-              #   , meanIncome = mean(MedianHHIncome, na.rm = T)
-              #   , meanBache = mean(percBachelorsPlus, na.rm = T)
-              #   , meanDrove = mean(percDroveToWork, na.rm = T)
-              #   , meanFamilyPov = mean(percFamilyHHinPoverty, na.rm = T)
-              #   , meanHHPov = mean(percHHinPoverty, na.rm = T)
-              #   , meanMarried = mean(percMarriedHHs, na.rm = T)
-              #   )))
-            }
 
             for(p in 1:dim(tmp_currentSolutionMeansStorage)[1])
             {
@@ -1117,7 +1116,7 @@ HERE BRUH
         } # End [ifMakeRadarPlots]
 
         # If [ifMakeDistributionPlots], plot distribution plots
-        if (ifMakeDistributionPlots)
+        if(ifMakeDistributionPlots)
         {
           # If there are more clusters than colors assigned (max of 35), then print warning and change plot row to account for it
           if(tmp_ifTooManyClustersForColors)
@@ -1142,23 +1141,25 @@ HERE BRUH
           # tmp_currentPlotCol <- tmp_currentPlotCol + 6
 
           # Iterate over each variable
-          for(tmp_currentDistrPlotVariableNumber in 1:length(dataColumns))
+          for(tmp_currentDistrPlotVariableNumber in 1:dim(tmp_currentSolutionMeansStorage)[1])
           {
 
             # Add variable title for plot
-            writeData(tmp_wb, tmp_worksheetName, dataColumns[tmp_currentDistrPlotVariableNumber], startRow = tmp_distrPlotStartRow, startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1)
+            writeData(tmp_wb, tmp_worksheetName, tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], startRow = tmp_distrPlotStartRow, startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1)
 
             # Iterate over clusters to find max density
             tmp_maxDensity_y <- 0
             tmp_maxDensity_x <- 0
-            tmp_densityTestData <- clusterData %>% select(all_of(tmp_plotClusterSolution), all_of(dataColumns[tmp_currentDistrPlotVariableNumber]))
+            # Get data for current var [tmp_currentDistrPlotVariableNumber] across all clusters in current solution [tmp_plotClusterSolution]
+            tmp_densityTestData <- clusterData %>% select(all_of(tmp_plotClusterSolution), all_of(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]))
 
             for(tmp_clustInCurrentSolution in 1:tmp_numClustersInSolution)
             {
               # Check density if cluster has 2 or more observations
               if( dim(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), ])[1] > 1 )
               {
-                tmp_clusterDen <- density(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), dataColumns[tmp_currentDistrPlotVariableNumber]])
+                # Get density and save maximums if they are higher than previous maxs
+                tmp_clusterDen <- density(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]])
                 if(max(tmp_clusterDen$x) > tmp_maxDensity_x) {tmp_maxDensity_x = max(tmp_clusterDen$x)}
                 if(max(tmp_clusterDen$y) > tmp_maxDensity_y) {tmp_maxDensity_y = max(tmp_clusterDen$y)}
               }
@@ -1187,14 +1188,14 @@ HERE BRUH
               if( dim(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), ])[1] > 1 )
               {
                 # Set temporary density
-                tmp_clusterDen <- density(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), dataColumns[tmp_currentDistrPlotVariableNumber]])
+                tmp_clusterDen <- density(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]])
 
                 # Plot density
                 plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(0, tmp_maxDensity_y), xlim = c(0,tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = "Percentile of Observations", ylab = "Relative Density")#, main = dataColumns[tmp_currentDistrPlotVariableNumber])
               }
 
               # Add mean
-              tmp_varMean <- mean(tmp_densityTestData[which(tmp_densityTestData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), dataColumns[tmp_currentDistrPlotVariableNumber]])
+              tmp_varMean <- tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber, +1]
               abline(v = tmp_varMean, lty = 2, col = tmp_clusterColors[tmp_clustInCurrentSolution])
 
               # Add text for mean, include cluster name if present
