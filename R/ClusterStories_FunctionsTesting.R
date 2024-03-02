@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2023-12-29
-# Updated: 2024-02-29
+# Updated: 2024-03-01
 # -------------------------------------------------------------------------
 
 
@@ -74,6 +74,7 @@
 # Force solutions to end up as 1:n if any clusters are missing in between
 
 # Check for FIX comments!!
+# Check for TODO comments!!
 # Check for DELETE comments!!
 
 # Change pooled variance to
@@ -84,7 +85,6 @@
 
 
 # -------------------------------------------------------------------------
-
 
 library(tidyverse)
 options(scipen=9999)
@@ -112,278 +112,25 @@ dataColumns = c(26:28)
 # sapply(clusterData %>% select(all_of(clusterSolutions)), max)
 head(clusterData)
 
-plotMetrics = TRUE
-includeDescriptions = T
-exportOutput = TRUE
-exportSignificantDigits = 3
-calledFromMetrics = F
-
 # Input vars with names instead of col numbers ->
 uniqueID = names(clusterData)[1]
 clusterSolutions = names(clusterData)[2:6]
 # clusterSolutions = sample(names(clusterData)[2:20])
 dataColumns = names(clusterData)[26:28]
+clusterNamesColumns = ""
+exportOutput = TRUE
+exportSignificantDigits = 3
+calledFromMetrics = FALSE
+ifMakeRadarPlots = FALSE
+ifMakeDistributionPlots = TRUE
+
+
+# foo <- describeClusters(clusterData, uniqueID, clusterSolutions, dataColumns = dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = TRUE, ifMakeDistributionPlots = TRUE)
 
 clusterDistances <- dist(clusterData %>% select(lclzd_JobsAndPopulation_std, lclzd_NumberOfBorderingRoads_std, lclzd_MedianValue_std)
   , method = "euclidean")
 
 clusterMetrics = ""
-
-getClusterMetrics <- function(clusterData, uniqueID, clusterSolutions, clusterNamesColumns = "", dataColumns, clusterDistances, clusterMetrics = "", plotMetrics = TRUE, includeDescriptions = TRUE, exportOutput = TRUE, exportSignificantDigits = 3)
-{
-  ## FUNCTION - Cluster Metrics
-  # Inputs:
-  #    - Data with uniqueID and cluster assignments
-  # Outputs:
-  #    - Cluster metric values
-  #    - Cluster metric plots
-  #    - Cluster descriptions if desired
-  #    - Excel file output if desired
-
-  # [clusterData] requires a data.frame with the following data:
-  #   - [uniqueID]: a column number for the unique IDs
-  #   - [clusterSolutions]: a list of which columns contain the clustering solutions (one column per solution)
-  #   - [dataColumns]: a list of which columns contain the clustering data
-
-  # Libraries and options
-  require(tidyverse)
-  require(fpc)
-  options(scipen = 9999)
-
-  # Check inputs ----------------------------------------------------------
-
-  # Check [exportSignificantDigits], must be >=1
-  if(class(exportSignificantDigits)[1] != "numeric")
-  {
-    stop("[exportSignificantDigits] must be numeric")
-  }
-
-  # Confirm [clusterData] is a data.frame, or convert if it is a matrix
-  if(class(clusterData)[1] == "matrix")
-  {
-    clusterData = as.data.frame(clusterData)
-  }
-  if(!class(clusterData) == "data.frame")
-  {
-    stop("[ClusterData] must be a data.frame")
-  }
-
-
-  # Confirm [uniqueID] are column number or a column name in [clusterData]
-  if(class(uniqueID)[1] == "numeric" & length(uniqueID) == 1) # Check for [uniqueID] type
-  {
-    if(uniqueID < 0 | uniqueID > dim(clusterData)[2]) # Check if [clusterData] has given column number
-    {
-      stop("[uniqueID] column number not in [clusterData] dimensions")
-    }
-
-    # Store both forms of [uniqueID] for checking overlap
-    tmp_uniqueID_char = names(clusterData)[uniqueID]
-    tmp_uniqueID_num = uniqueID
-
-  } else if(class(uniqueID)[1] == "character" & length(uniqueID) == 1) # Check for [uniqueID] type
-  {
-
-    if(!uniqueID %in% names(clusterData)) # Check if [clusterData] has given name
-    {
-      stop("[uniqueID] name not in [clusterData]")
-    }
-
-    # Store both forms of [uniqueID] for checking overlap
-    tmp_uniqueID_char = uniqueID
-    tmp_uniqueID_num = which(names(clusterData) == uniqueID)
-
-  } else # Else not a numeric or character entry
-  {
-    stop("[uniqueID] must be a single number or string")
-  }
-
-  # Confirm [clusterSolutions] are column numbers or column names in [clusterData]
-  if(class(clusterSolutions)[1] == "integer" | class(clusterSolutions)[1] == "numeric" ) # Check for [clusterSolutions] type
-  {
-
-    # Check if [clusterSolutions] are outside the dimensions of [clusterData]
-    if(any(clusterSolutions > dim(clusterData)[2]) | any(clusterSolutions < 1))
-    {
-      stop("[clusterSolutions] column numbers must be within the dimensions of [clusterData]")
-    }
-
-    # Store both forms of [uniqueID] for checking overlap
-    tmp_clusterSolutions_char = names(clusterData)[clusterSolutions]
-    tmp_clusterSolutions_num = clusterSolutions
-
-  } else if(class(clusterSolutions)[1] == "character") # Check for [clusterSolutions] type
-  {
-
-    # Check if [clusterSolutions] are outside the dimensions of [clusterData]
-    if( !all(clusterSolutions %in% names(clusterData)) )
-    {
-      stop("[clusterSolutions] names must be in [clusterData] names")
-    }
-
-    # Store both forms of [uniqueID] for checking overlap
-    tmp_clusterSolutions_char = clusterSolutions
-    tmp_clusterSolutions_num = sapply(clusterSolutions, FUN = function(x) { which( names(clusterData) == x ) })
-
-  } else # Else not a numeric or character entry
-  {
-    stop("[clusterSolutions] must be a list of numbers or strings")
-  }
-
-  # Confirm [dataColumns] are column numbers or column names in [clusterData]
-  if(class(dataColumns)[1] == "integer") # Check for [dataColumns] type
-  {
-
-    # Check if [dataColumns] are outside the dimensions of [clusterData]
-    if(any(dataColumns > dim(clusterData)[2]) | any(dataColumns < 1))
-    {
-      stop("[dataColumns] column numbers must be within the dimensions of [clusterData]")
-    }
-
-    # Store both forms of [uniqueID] for checking overlap
-    tmp_dataColumns_char = names(clusterData)[dataColumns]
-    tmp_dataColumns_num = dataColumns
-
-  } else if(class(dataColumns)[1] == "character") # Check for [dataColumns] type
-  {
-
-    # Check if [dataColumns] are in names of [clusterData]
-    if( !all(dataColumns %in% names(clusterData)) )
-    {
-      stop("[dataColumns] names must be in [clusterData] names")
-    }
-
-    # Store both forms of [uniqueID] for checking overlap
-    tmp_dataColumns_char = dataColumns
-    tmp_dataColumns_num = sapply(dataColumns, FUN = function(x) { which( names(clusterData) == x ) })
-
-  } else # Else not a numeric or character entry
-  {
-    stop("[dataColumns] must be a list of numbers or strings")
-  }
-
-  # Confirm there is no overlap in [uniqueID], [clusterSolutions], or [dataColumns]
-  if(any(duplicated(unlist(
-      c(
-        tmp_uniqueID_num
-        , tmp_clusterSolutions_num
-        , tmp_dataColumns_num
-      )
-  ))))
-  {
-    stop("[uniqueID], [clusterSolutions], and [dataColumns] must all be mutually exclusive")
-  }
-
-  # Once duplicates are confirmed not to exist, store all column names in label form
-  # These all are now the character versions of the original user input
-  uniqueID <- tmp_uniqueID_char
-  clusterSolutions <- tmp_clusterSolutions_char
-  dataColumns <- tmp_dataColumns_char
-
-  # Reorder [clusterSolutions] by number of clusters (i.e. max cluster ID by column)
-  clusterSolutions <- clusterSolutions[
-      order(
-        sapply(clusterData %>% select(all_of(clusterSolutions)), max)
-        )
-    ]
-
-  # Subset [clusterData] to [uniqueID], [clusterSolutions], and [dataColumns] only
-  clusterData <- clusterData %>% select(
-    all_of(uniqueID)
-    , all_of(clusterSolutions)
-    , all_of(dataColumns)
-  )
-
-
-  # Set total number of cluster solutions
-  tmp_numClustSolutions <- length(clusterSolutions)
-
-  if(clusterMetrics[1] == "")
-  {
-    clusterMetrics = c(
-      "within.cluster.ss" # Within-cluster sum of squares
-    , "avg.silwidth" # Average silhouette width
-    , "ch" # Calinski-Harabasz index
-    , "wb.ratio" # Within/between SSE ratio
-    )
-  } else # Check that each given cluster metric is valid
-  {
-    if(
-      !all(
-        clusterMetrics %in%
-        c("n", "cluster.number", "cluster.size", "min.cluster.size", "noisen", "diameter", "average.distance", "median.distance", "separation", "average.toother", "separation.matrix", "ave.between.matrix", "average.between", "average.within", "n.between", "n.within", "max.diameter", "min.separation", "within.cluster.ss", "clus.avg.silwidths", "avg.silwidth", "g2", "g3", "pearsongamma", "dunn", "dunn2", "entropy", "wb.ratio", "ch", "cwidegap", "widestgap", "sindex", "corrected.rand", "vi")
-      )
-    )
-    {
-      stop(paste0("Cluster fit metrics must be from {fpc} package fcn [cluster.stats] \n -> Valid entries: n, cluster.number, cluster.size, min.cluster.size, noisen, diameter, average.distance, median.distance, separation, average.toother, separation.matrix, ave.between.matrix, average.between, average.within, n.between, n.within, max.diameter, min.separation, within.cluster.ss, clus.avg.silwidths, avg.silwidth, g2, g3, pearsongamma, dunn, dunn2, entropy, wb.ratio, ch, cwidegap, widestgap, sindex, corrected.rand, vi"))
-    }
-  }
-
-  # Create cluster fit metrics storage matrix
-  tmp_clustFitMetricStorage <- as.data.frame(matrix(, tmp_numClustSolutions, (length(clusterMetrics) + 2)) ) # Storage matrix for cluster fit metrics; no metrics for 1 cluster so n-1
-  names(tmp_clustFitMetricStorage) <- c("ClusterSolutionName", "NumClusters"
-      , clusterMetrics
-    )
-
-  # Add cluster solution names to storge
-  tmp_clustFitMetricStorage[,1] <- clusterSolutions
-  # Fill in 'Cluster Number' column with max of cluster IDs for each solution set, i.e. number of clusters in given solution
-  tmp_clustFitMetricStorage[,2] <- sapply(clusterData %>% select(all_of(clusterSolutions)), max)
-
-  # Calculate cluster metrics for each [clusterSolutions]
-  for(tmp_clustSolution in clusterSolutions)
-  {
-    print(paste0("Fitting metrics for [k=", tmp_clustFitMetricStorage %>% filter(ClusterSolutionName == tmp_clustSolution) %>% select(NumClusters), "]"))
-    tmp_clustIDs <- unlist(clusterData %>% select(all_of(tmp_clustSolution))) # Store cluster IDs
-    tmp_clustStats <- cluster.stats(clusterDistances, tmp_clustIDs) # Get cluster statistics
-
-    tmp_numberStartingCols <- 2 # The (2) starting columns are 'ClusterSolutionName' and 'NumClusters'. This is the offset for downstream column selection
-
-    tmp_currentSolutionRow <- which(clusterSolutions == tmp_clustSolution) # Set row of [tmp_clustFitMetricStorage] for current cluster solution [tmp_clustSolution]
-
-    # Confirm 'cluster.number' == tmp_clustFitMetricStorage[,2]
-    if(!tmp_clustFitMetricStorage[tmp_currentSolutionRow,2] == tmp_clustStats$cluster.number)
-    {
-      stop("Number of clusters in solution do not match 'cluster.stats' output")
-    }
-
-    # Store desired cluster metrics
-    tmp_clustFitMetricStorage[tmp_currentSolutionRow, (1:length(clusterMetrics) + tmp_numberStartingCols)] <- tmp_clustStats[ clusterMetrics ]
-
-    rm(tmp_clustStats)
-  }
-
-  # Print metrics
-  print(tmp_clustFitMetricStorage)
-
-  # Plot cluster metrics
-  if(plotMetrics)
-  {
-    # Iterate over fit metrics
-    for(x in (tmp_numberStartingCols+1):dim(tmp_clustFitMetricStorage)[2]) {
-      plot(tmp_clustFitMetricStorage[,2], tmp_clustFitMetricStorage[,x], type = 'l', main = names(tmp_clustFitMetricStorage)[x], xlab = "Cluster Number", xaxt = "n", ylab = "Metric Value")
-      axis(side = 1, at = tmp_clustFitMetricStorage[,2], labels = tmp_clustFitMetricStorage[,2])
-      grid()
-    }
-  }
-
-  # If [includeDescriptions] is TRUE, call descriptions function
-  if(includeDescriptions)
-  {
-    tmp_clusterDescriptionsStorage <- describeClusters(clusterData, tmp_uniqueID_char, tmp_clusterSolutions_char, tmp_dataColumns_char, exportSignificantDigits, calledFromMetrics = TRUE)
-  }
-
-  # If [exportOutput] is TRUE, export the output created above
-  if(exportOutput)
-  {
-    # Export to current working directory
-    return(tmp_clusterDescriptionsStorage)
-  }
-
-
-}
-
-
 
 describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNamesColumns = "", dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = FALSE, ifMakeDistributionPlots = TRUE)
 {
@@ -413,7 +160,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
   options(scipen = 9999)
 
   # Store current R plot margins from par()$mar and reset data after plotting
-  tmp_previousRPlotMarginSettings <- par()$mar
+  # tmp_previousRPlotMarginSettings <- par()$mar
 
   # Check inputs ----------------------------------------------------------
 
@@ -594,19 +341,32 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
   dataColumns <- tmp_dataColumns_char
 
   # Subset [clusterData] to [uniqueID], [clusterSolutions], [clusterNamesColumns], and [dataColumns] only
-  clusterData <- clusterData %>% select(
-    all_of(uniqueID)
-    , all_of(clusterSolutions)
-    , all_of(clusterNamesColumns[which(clusterNamesColumns != "")])
-    , all_of(dataColumns)
-  )
+  if(any(clusterNamesColumns != ""))
+  {
+    clusterData <- clusterData %>% select(
+      all_of(uniqueID)
+      , all_of(clusterSolutions)
+      , all_of(clusterNamesColumns[which(clusterNamesColumns != "")])
+      , all_of(dataColumns)
+    )
+  } else
+  {
+      clusterData <- clusterData %>% select(
+      all_of(uniqueID)
+      , all_of(clusterSolutions)
+      , all_of(dataColumns)
+    )
+  }
 
-  # Reorder [clusterNamesColumns] and [clusterSolutions] by number of clusters (i.e. max cluster ID by column)
-  clusterNamesColumns <- clusterNamesColumns[
-      order(
-        sapply(clusterData %>% select(all_of(clusterSolutions)), max)
-        )
-    ]
+  # Reorder [clusterSolutions] and [clusterNamesColumns] by number of clusters (i.e. max cluster ID by column)
+  if(any(clusterNamesColumns != ""))
+  {
+    clusterNamesColumns <- clusterNamesColumns[
+        order(
+          sapply(clusterData %>% select(all_of(clusterSolutions)), max)
+          )
+      ]
+  }
 
   clusterSolutions <- clusterSolutions[
       order(
@@ -628,7 +388,11 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
     print(paste0("Generating cluster descriptions for solution [", tmp_clustSolution,"]"))
 
     # Set cluster names if available
-    if(clusterNamesColumns[1, tmp_clustSolution] != "")
+    if(clusterNamesColumns[1,tmp_clustSolution] == "")
+    {
+      tmp_currentSolutionNames <- ""
+    } else
+    # if(clusterNamesColumns != "" | clusterNamesColumns[1, tmp_clustSolution] != "")
     {
       # Set current cluster solution name col based on ID col
       tmp_namesCol <- clusterNamesColumns[1, tmp_clustSolution]
@@ -642,9 +406,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
         print(tmp_currentSolutionNames)
         stop("[clusterSolutions] IDs must uniquely match given cluster names")
       }
-    } else
-    {
-      tmp_currentSolutionNames <- ""
     }
 
 
@@ -821,7 +582,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
     # Create parameters workbook
     addWorksheet(tmp_wb, "Parameters")
     writeData(tmp_wb, "Parameters", "Standard difference threshold:", startCol = 2, startRow = 2)
-    writeData(tmp_wb, "Parameters", 0.2, startCol = 3, startRow = 2)
+    writeData(tmp_wb, "Parameters", 0.5, startCol = 3, startRow = 2)
 
 
     # Create cluster sizes workbook
@@ -987,13 +748,13 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
           # Cluster name
           writeData(tmp_wb, tmp_worksheetName, tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,5], startCol = tmp_currentCol + 1, startRow = tmp_titleRow)
           # Cluster color
-          tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
-          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 2, rows = tmp_titleRow, stack = F)
+          # tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
+          # addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 2, rows = tmp_titleRow, stack = F)
         } else
         {
           # Cluster color
-          tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
-          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 1, rows = tmp_titleRow, stack = F)
+          # tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
+          # addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 1, rows = tmp_titleRow, stack = F)
         }
         # Add proportions table to worksheet
         writeData(tmp_wb, tmp_worksheetName, tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,3:4], startCol = tmp_currentCol, startRow = tmp_proportionRow)
@@ -1038,23 +799,23 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
         if(ifMakeRadarPlots)
         {
           tmp_radarPlotStartRow = tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
-          tmp_radarPlotColIncrease = 6 # Number of cols to match 6 inches of plot width plus a margin
+          tmp_radarPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
 
           # If there are also distribution plots requested, set those values based on the radar plot start row value
           if(ifMakeDistributionPlots & tmp_numClustersInSolution >= 3) # If there are 3 or more clusters, than radar plots are viable for this solution [s]
           {
             tmp_distrPlotStartRow = tmp_radarPlotStartRow + 24 # [tmp_radarPlotStartRow] plus 24 rows to skip radar plots (size of plot at 4 inches high)
-            tmp_distrPlotColIncrease = 6 # Number of cols to match 6 inches of plot width plus a margin
+            tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
           } else # Else there are too few data points for radar plots, so only a notice will be inserted in lieu of these plots
           {
             tmp_distrPlotStartRow = tmp_radarPlotStartRow + 4 # [tmp_radarPlotStartRow] plus 3 rows to skip the notice that there are no radar plots for solutions with fewer than 3 clusters
-            tmp_distrPlotColIncrease = 8 # Number of cols to match 6 inches of plot width plus a margin
+            tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
           }
 
         } else
         {
           tmp_distrPlotStartRow = tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
-          tmp_distrPlotColIncrease = 6 # Number of cols to match 6 inches of plot width plus a margin
+          tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
         }
 
         # If any plotting, fill means table. Use this table to establish variable plot order as well
@@ -1362,3 +1123,257 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
   return(tmp_clusterDescriptionsStorage)
 } # END FUNCTION - [describeClusters] #
 
+
+getClusterMetrics <- function(clusterData, uniqueID, clusterSolutions, clusterNamesColumns = "", dataColumns, clusterDistances, clusterMetrics = "", plotMetrics = TRUE, includeDescriptions = TRUE, exportOutput = TRUE, exportSignificantDigits = 3)
+{
+  ## FUNCTION - Cluster Metrics
+  # Inputs:
+  #    - Data with uniqueID and cluster assignments
+  # Outputs:
+  #    - Cluster metric values
+  #    - Cluster metric plots
+  #    - Cluster descriptions if desired
+  #    - Excel file output if desired
+
+  # [clusterData] requires a data.frame with the following data:
+  #   - [uniqueID]: a column number for the unique IDs
+  #   - [clusterSolutions]: a list of which columns contain the clustering solutions (one column per solution)
+  #   - [dataColumns]: a list of which columns contain the clustering data
+
+  # Libraries and options
+  require(tidyverse)
+  require(fpc)
+  options(scipen = 9999)
+
+  # Check inputs ----------------------------------------------------------
+
+  # Check [exportSignificantDigits], must be >=1
+  if(class(exportSignificantDigits)[1] != "numeric")
+  {
+    stop("[exportSignificantDigits] must be numeric")
+  }
+
+  # Confirm [clusterData] is a data.frame, or convert if it is a matrix
+  if(class(clusterData)[1] == "matrix")
+  {
+    clusterData = as.data.frame(clusterData)
+  }
+  if(!class(clusterData) == "data.frame")
+  {
+    stop("[ClusterData] must be a data.frame")
+  }
+
+
+  # Confirm [uniqueID] are column number or a column name in [clusterData]
+  if(class(uniqueID)[1] == "numeric" & length(uniqueID) == 1) # Check for [uniqueID] type
+  {
+    if(uniqueID < 0 | uniqueID > dim(clusterData)[2]) # Check if [clusterData] has given column number
+    {
+      stop("[uniqueID] column number not in [clusterData] dimensions")
+    }
+
+    # Store both forms of [uniqueID] for checking overlap
+    tmp_uniqueID_char = names(clusterData)[uniqueID]
+    tmp_uniqueID_num = uniqueID
+
+  } else if(class(uniqueID)[1] == "character" & length(uniqueID) == 1) # Check for [uniqueID] type
+  {
+
+    if(!uniqueID %in% names(clusterData)) # Check if [clusterData] has given name
+    {
+      stop("[uniqueID] name not in [clusterData]")
+    }
+
+    # Store both forms of [uniqueID] for checking overlap
+    tmp_uniqueID_char = uniqueID
+    tmp_uniqueID_num = which(names(clusterData) == uniqueID)
+
+  } else # Else not a numeric or character entry
+  {
+    stop("[uniqueID] must be a single number or string")
+  }
+
+  # Confirm [clusterSolutions] are column numbers or column names in [clusterData]
+  if(class(clusterSolutions)[1] == "integer" | class(clusterSolutions)[1] == "numeric" ) # Check for [clusterSolutions] type
+  {
+
+    # Check if [clusterSolutions] are outside the dimensions of [clusterData]
+    if(any(clusterSolutions > dim(clusterData)[2]) | any(clusterSolutions < 1))
+    {
+      stop("[clusterSolutions] column numbers must be within the dimensions of [clusterData]")
+    }
+
+    # Store both forms of [uniqueID] for checking overlap
+    tmp_clusterSolutions_char = names(clusterData)[clusterSolutions]
+    tmp_clusterSolutions_num = clusterSolutions
+
+  } else if(class(clusterSolutions)[1] == "character") # Check for [clusterSolutions] type
+  {
+
+    # Check if [clusterSolutions] are outside the dimensions of [clusterData]
+    if( !all(clusterSolutions %in% names(clusterData)) )
+    {
+      stop("[clusterSolutions] names must be in [clusterData] names")
+    }
+
+    # Store both forms of [uniqueID] for checking overlap
+    tmp_clusterSolutions_char = clusterSolutions
+    tmp_clusterSolutions_num = sapply(clusterSolutions, FUN = function(x) { which( names(clusterData) == x ) })
+
+  } else # Else not a numeric or character entry
+  {
+    stop("[clusterSolutions] must be a list of numbers or strings")
+  }
+
+  # Confirm [dataColumns] are column numbers or column names in [clusterData]
+  if(class(dataColumns)[1] == "integer") # Check for [dataColumns] type
+  {
+
+    # Check if [dataColumns] are outside the dimensions of [clusterData]
+    if(any(dataColumns > dim(clusterData)[2]) | any(dataColumns < 1))
+    {
+      stop("[dataColumns] column numbers must be within the dimensions of [clusterData]")
+    }
+
+    # Store both forms of [uniqueID] for checking overlap
+    tmp_dataColumns_char = names(clusterData)[dataColumns]
+    tmp_dataColumns_num = dataColumns
+
+  } else if(class(dataColumns)[1] == "character") # Check for [dataColumns] type
+  {
+
+    # Check if [dataColumns] are in names of [clusterData]
+    if( !all(dataColumns %in% names(clusterData)) )
+    {
+      stop("[dataColumns] names must be in [clusterData] names")
+    }
+
+    # Store both forms of [uniqueID] for checking overlap
+    tmp_dataColumns_char = dataColumns
+    tmp_dataColumns_num = sapply(dataColumns, FUN = function(x) { which( names(clusterData) == x ) })
+
+  } else # Else not a numeric or character entry
+  {
+    stop("[dataColumns] must be a list of numbers or strings")
+  }
+
+  # Confirm there is no overlap in [uniqueID], [clusterSolutions], or [dataColumns]
+  if(any(duplicated(unlist(
+      c(
+        tmp_uniqueID_num
+        , tmp_clusterSolutions_num
+        , tmp_dataColumns_num
+      )
+  ))))
+  {
+    stop("[uniqueID], [clusterSolutions], and [dataColumns] must all be mutually exclusive")
+  }
+
+  # Once duplicates are confirmed not to exist, store all column names in label form
+  # These all are now the character versions of the original user input
+  uniqueID <- tmp_uniqueID_char
+  clusterSolutions <- tmp_clusterSolutions_char
+  dataColumns <- tmp_dataColumns_char
+
+  # Reorder [clusterSolutions] by number of clusters (i.e. max cluster ID by column)
+  clusterSolutions <- clusterSolutions[
+      order(
+        sapply(clusterData %>% select(all_of(clusterSolutions)), max)
+        )
+    ]
+
+  # Subset [clusterData] to [uniqueID], [clusterSolutions], and [dataColumns] only
+  clusterData <- clusterData %>% select(
+    all_of(uniqueID)
+    , all_of(clusterSolutions)
+    , all_of(dataColumns)
+  )
+
+
+  # Set total number of cluster solutions
+  tmp_numClustSolutions <- length(clusterSolutions)
+
+  if(clusterMetrics[1] == "")
+  {
+    clusterMetrics = c(
+      "within.cluster.ss" # Within-cluster sum of squares
+    , "avg.silwidth" # Average silhouette width
+    , "ch" # Calinski-Harabasz index
+    , "wb.ratio" # Within/between SSE ratio
+    )
+  } else # Check that each given cluster metric is valid
+  {
+    if(
+      !all(
+        clusterMetrics %in%
+        c("n", "cluster.number", "cluster.size", "min.cluster.size", "noisen", "diameter", "average.distance", "median.distance", "separation", "average.toother", "separation.matrix", "ave.between.matrix", "average.between", "average.within", "n.between", "n.within", "max.diameter", "min.separation", "within.cluster.ss", "clus.avg.silwidths", "avg.silwidth", "g2", "g3", "pearsongamma", "dunn", "dunn2", "entropy", "wb.ratio", "ch", "cwidegap", "widestgap", "sindex", "corrected.rand", "vi")
+      )
+    )
+    {
+      stop(paste0("Cluster fit metrics must be from {fpc} package fcn [cluster.stats] \n -> Valid entries: n, cluster.number, cluster.size, min.cluster.size, noisen, diameter, average.distance, median.distance, separation, average.toother, separation.matrix, ave.between.matrix, average.between, average.within, n.between, n.within, max.diameter, min.separation, within.cluster.ss, clus.avg.silwidths, avg.silwidth, g2, g3, pearsongamma, dunn, dunn2, entropy, wb.ratio, ch, cwidegap, widestgap, sindex, corrected.rand, vi"))
+    }
+  }
+
+  # Create cluster fit metrics storage matrix
+  tmp_clustFitMetricStorage <- as.data.frame(matrix(, tmp_numClustSolutions, (length(clusterMetrics) + 2)) ) # Storage matrix for cluster fit metrics; no metrics for 1 cluster so n-1
+  names(tmp_clustFitMetricStorage) <- c("ClusterSolutionName", "NumClusters"
+      , clusterMetrics
+    )
+
+  # Add cluster solution names to storge
+  tmp_clustFitMetricStorage[,1] <- clusterSolutions
+  # Fill in 'Cluster Number' column with max of cluster IDs for each solution set, i.e. number of clusters in given solution
+  tmp_clustFitMetricStorage[,2] <- sapply(clusterData %>% select(all_of(clusterSolutions)), max)
+
+  # Calculate cluster metrics for each [clusterSolutions]
+  for(tmp_clustSolution in clusterSolutions)
+  {
+    print(paste0("Fitting metrics for [k=", tmp_clustFitMetricStorage %>% filter(ClusterSolutionName == tmp_clustSolution) %>% select(NumClusters), "]"))
+    tmp_clustIDs <- unlist(clusterData %>% select(all_of(tmp_clustSolution))) # Store cluster IDs
+    tmp_clustStats <- cluster.stats(clusterDistances, tmp_clustIDs) # Get cluster statistics
+
+    tmp_numberStartingCols <- 2 # The (2) starting columns are 'ClusterSolutionName' and 'NumClusters'. This is the offset for downstream column selection
+
+    tmp_currentSolutionRow <- which(clusterSolutions == tmp_clustSolution) # Set row of [tmp_clustFitMetricStorage] for current cluster solution [tmp_clustSolution]
+
+    # Confirm 'cluster.number' == tmp_clustFitMetricStorage[,2]
+    if(!tmp_clustFitMetricStorage[tmp_currentSolutionRow,2] == tmp_clustStats$cluster.number)
+    {
+      stop("Number of clusters in solution do not match 'cluster.stats' output")
+    }
+
+    # Store desired cluster metrics
+    tmp_clustFitMetricStorage[tmp_currentSolutionRow, (1:length(clusterMetrics) + tmp_numberStartingCols)] <- tmp_clustStats[ clusterMetrics ]
+
+    rm(tmp_clustStats)
+  }
+
+  # Print metrics
+  print(tmp_clustFitMetricStorage)
+
+  # Plot cluster metrics
+  if(plotMetrics)
+  {
+    # Iterate over fit metrics
+    for(x in (tmp_numberStartingCols+1):dim(tmp_clustFitMetricStorage)[2]) {
+      plot(tmp_clustFitMetricStorage[,2], tmp_clustFitMetricStorage[,x], type = 'l', main = names(tmp_clustFitMetricStorage)[x], xlab = "Cluster Number", xaxt = "n", ylab = "Metric Value")
+      axis(side = 1, at = tmp_clustFitMetricStorage[,2], labels = tmp_clustFitMetricStorage[,2])
+      grid()
+    }
+  }
+
+  # If [includeDescriptions] is TRUE, call descriptions function
+  if(includeDescriptions)
+  {
+    tmp_clusterDescriptionsStorage <- describeClusters(clusterData, tmp_uniqueID_char, tmp_clusterSolutions_char, tmp_dataColumns_char, exportSignificantDigits, calledFromMetrics = TRUE)
+  }
+
+  # If [exportOutput] is TRUE, export the output created above
+  if(exportOutput)
+  {
+    # Export to current working directory
+    return(tmp_clusterDescriptionsStorage)
+  }
+
+
+}
