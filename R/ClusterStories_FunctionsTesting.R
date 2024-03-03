@@ -59,6 +59,17 @@
 
 # Any way to look for missing combinations? business opportunity for gap in the market
 
+# Add variable precision and units secondary table
+# Make distr plots in GGPlot
+# Re-add legend below plot
+
+# Add one-pager describing how to use product
+
+# Add vector to change colors of pos and neg sig
+# Add vector to change distr plot colors
+
+# Create structure overview
+
 
 # Add header page to excel output with metrics if descriptions fcn was called from metrics fcn
 # Add header page to excel output with proportions
@@ -1038,7 +1049,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
                 )
 
                 # Plot density
-                plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(0, tmp_maxDensity_y), xlim = c(0,tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("[", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "] distribution"))
+                plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(0, tmp_maxDensity_y), xlim = c(0,tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
               }
 
               # Add mean
