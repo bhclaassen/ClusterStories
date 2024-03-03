@@ -18,7 +18,6 @@
 # -------------------------------------------------------------------------
 
 
-
 # -------------------------------------------------------------------------
 ## PACKAGE FUNCTION ##
 ## FUNCTION - describeClusters ##
@@ -132,17 +131,17 @@ clusterNamesColumns = ""
 exportOutput = TRUE
 exportSignificantDigits = 3
 calledFromMetrics = FALSE
-ifMakeRadarPlots = FALSE
-ifMakeDistributionPlots = TRUE
+includeRadarPlots = FALSE
+includeDistributionPlots = TRUE
 
 
-foo <- describeClusters(clusterData, uniqueID, clusterSolutions, dataColumns = dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = TRUE, ifMakeDistributionPlots = TRUE)
+foo <- describeClusters(clusterData, uniqueID, clusterSolutions, dataColumns = dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, includeRadarPlots = TRUE, includeDistributionPlots = TRUE)
 foo <- describeClusters(
   clusterData = clustDat
   , uniqueID = "GEOID20"
   , clusterSolutions = c(2:20)
   , dataColumns = c("lclzd_JobsAndPopulation_std", "lclzd_NumberOfBorderingRoads_std", "lclzd_MedianValue_std")
-  , ifMakeRadarPlots = TRUE
+  , includeRadarPlots = TRUE
   )
 
 clusterDistances <- dist(clusterData %>% select(lclzd_JobsAndPopulation_std, lclzd_NumberOfBorderingRoads_std, lclzd_MedianValue_std)
@@ -150,7 +149,7 @@ clusterDistances <- dist(clusterData %>% select(lclzd_JobsAndPopulation_std, lcl
 
 clusterMetrics = ""
 
-describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterNamesColumns = "", exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = FALSE, ifMakeDistributionPlots = TRUE)
+describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterNamesColumns = "", exportOutput = TRUE, exportSignificantDigits = 3, includeRadarPlots = FALSE, includeDistributionPlots = TRUE, includeClusterDescriptions = TRUE, includeClusterMetrics = TRUE)
 {
   ## FUNCTION - Cluster Descriptions
   # Inputs:
@@ -372,11 +371,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     )
   }
 
-# HERE !! -----------------------------------------------------------------
-
-
-
-
   # Reorder [clusterSolutions] and [clusterNamesColumns] by number of clusters (i.e. max cluster ID by column)
   if(any(clusterNamesColumns != ""))
   {
@@ -411,169 +405,179 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
 
   # Begin descriptions ----------------------------------------------------
-  # Set number variables in [clusterData]
-  tmp_numVariables <- length(dataColumns)
-
-  # Create a description for each solution
-  for(tmp_clustSolution in clusterSolutions)
+  if(includeClusterDescriptions)
   {
-    print(paste0("Generating cluster descriptions for solution [", tmp_clustSolution,"]"))
+    # Set number variables in [clusterData]
+    tmp_numVariables <- length(dataColumns)
 
-    # Set cluster names if available
-    if(clusterNames[1,tmp_clustSolution] == "")
+    # Create a description for each solution
+    for(tmp_clustSolution in clusterSolutions)
     {
-      tmp_currentSolutionNames <- ""
-    } else
-    {
-      # Set current cluster solution name col based on ID col
-      tmp_namesCol <- clusterNames[1, tmp_clustSolution]
+      print(paste0("Generating cluster descriptions for solution [", tmp_clustSolution,"]"))
 
-      # Get unique pairs of cluster IDs/names
-      tmp_currentSolutionNames <- unique(clusterData[,c(tmp_namesCol, tmp_clustSolution)])
-
-      # Confirm cluster names are unique to cluster IDs for current solution
-      if(length(unique(tmp_currentSolutionNames[,1])) !=  dim(tmp_currentSolutionNames)[1] | length(unique(tmp_currentSolutionNames[,2])) !=  dim(tmp_currentSolutionNames)[1] )
+      # Set cluster names if available
+      if(clusterNames[1,tmp_clustSolution] == "")
       {
-        print(tmp_currentSolutionNames)
-        stop("[clusterSolutions] IDs must uniquely match given cluster names")
-      }
-    }
-
-
-    # Iterate over each group in the current solution
-    for(tmp_currentCluster in 1:length(table(clusterData[, tmp_clustSolution])) )
-    {
-      # Initialize storage for current cluster ID within current cluster solution
-      tmp_clusterProportions <- as.data.frame(matrix(, 1, 5)) # Cluster size and proportion
-      names(tmp_clusterProportions) <- c("Cluster Number", "Total Number of Clusters", "Number of Observations", "Proportion", "Cluster Name")
-      tmp_clusterVarDescriptions <- as.data.frame(matrix(, tmp_numVariables, 6)) # Cluster variables description (rows: num variables, cols: 5 metrics)
-      names(tmp_clusterVarDescriptions) <- c("Variable", "Mean", "Mean Diff", "Std Mean Diff", "Pooled Std Dev", "Out-Cluster Mean")
-
-      ## Fill in description
-      # Current Cluster Number
-      tmp_clusterProportions[1,1] <- tmp_currentCluster
-      # Total Number of Clusters
-      tmp_clusterProportions[1,2] <- length(table(clusterData[, tmp_clustSolution]))
-      # Number of Observations
-      tmp_clusterProportions[1,3] <- table(clusterData[, tmp_clustSolution])[tmp_currentCluster]
-      # Proportion
-      tmp_clusterProportions[1,4] <- table(clusterData[, tmp_clustSolution])[tmp_currentCluster] / sum( table(clusterData[, tmp_clustSolution]) )
-      # Cluster name
-      if(length(tmp_currentSolutionNames) == 2) # This check if there are names for clusters, even if some are blanks ("")
-      {
-        tmp_clusterProportions[1,5] <- tmp_currentSolutionNames[which(tmp_currentSolutionNames[,2] == tmp_currentCluster),1]
+        tmp_currentSolutionNames <- ""
       } else
       {
-        tmp_clusterProportions[1,5] <- ""
+        # Set current cluster solution name col based on ID col
+        tmp_namesCol <- clusterNames[1, tmp_clustSolution]
+
+        # Get unique pairs of cluster IDs/names
+        tmp_currentSolutionNames <- unique(clusterData[,c(tmp_namesCol, tmp_clustSolution)])
+
+        # Confirm cluster names are unique to cluster IDs for current solution
+        if(length(unique(tmp_currentSolutionNames[,1])) !=  dim(tmp_currentSolutionNames)[1] | length(unique(tmp_currentSolutionNames[,2])) !=  dim(tmp_currentSolutionNames)[1] )
+        {
+          print(tmp_currentSolutionNames)
+          stop("[clusterSolutions] IDs must uniquely match given cluster names")
+        }
       }
 
-      # Pull out variables in [dataColumns] for current cluster ID within the current cluster solution
-      tmp_inClusterStdDiffData <- clusterData[which(clusterData[,tmp_clustSolution] == tmp_currentCluster), ] %>% select(all_of(dataColumns))
-      tmp_outClusterStdDiffData <- clusterData[which(clusterData[,tmp_clustSolution] != tmp_currentCluster), ] %>% select(all_of(dataColumns))
 
-      # Variable
-      tmp_clusterVarDescriptions[,1] <- dataColumns # Variable names passed by user
+      # Iterate over each group in the current solution
+      for(tmp_currentCluster in 1:length(table(clusterData[, tmp_clustSolution])) )
+      {
+        # Initialize storage for current cluster ID within current cluster solution
+        tmp_clusterProportions <- as.data.frame(matrix(, 1, 5)) # Cluster size and proportion
+        names(tmp_clusterProportions) <- c("Cluster Number", "Total Number of Clusters", "Number of Observations", "Proportion", "Cluster Name")
+        tmp_clusterVarDescriptions <- as.data.frame(matrix(, tmp_numVariables, 6)) # Cluster variables description (rows: num variables, cols: 5 metrics)
+        names(tmp_clusterVarDescriptions) <- c("Variable", "Mean", "Mean Diff", "Std Mean Diff", "Pooled Std Dev", "Out-Cluster Mean")
 
-      # In-Cluster Means
-      tmp_clusterVarDescriptions[,2] <- sapply( # Vector of means for each variable in in-cluster data
-        tmp_inClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
-      )
+        ## Fill in description
+        # Current Cluster Number
+        tmp_clusterProportions[1,1] <- tmp_currentCluster
+        # Total Number of Clusters
+        tmp_clusterProportions[1,2] <- length(table(clusterData[, tmp_clustSolution]))
+        # Number of Observations
+        tmp_clusterProportions[1,3] <- table(clusterData[, tmp_clustSolution])[tmp_currentCluster]
+        # Proportion
+        tmp_clusterProportions[1,4] <- table(clusterData[, tmp_clustSolution])[tmp_currentCluster] / sum( table(clusterData[, tmp_clustSolution]) )
+        # Cluster name
+        if(length(tmp_currentSolutionNames) == 2) # This check if there are names for clusters, even if some are blanks ("")
+        {
+          tmp_clusterProportions[1,5] <- tmp_currentSolutionNames[which(tmp_currentSolutionNames[,2] == tmp_currentCluster),1]
+        } else
+        {
+          tmp_clusterProportions[1,5] <- ""
+        }
 
-      # In-/Out-Cluster Mean Diffs
-      tmp_clusterVarDescriptions[,3] <- tmp_clusterVarDescriptions[,2] -
-        sapply( # Vector of means for each variable in out-cluster data
-          tmp_outClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
+        # Pull out variables in [dataColumns] for current cluster ID within the current cluster solution
+        tmp_inClusterStdDiffData <- clusterData[which(clusterData[,tmp_clustSolution] == tmp_currentCluster), ] %>% select(all_of(dataColumns))
+        tmp_outClusterStdDiffData <- clusterData[which(clusterData[,tmp_clustSolution] != tmp_currentCluster), ] %>% select(all_of(dataColumns))
+
+        # Variable
+        tmp_clusterVarDescriptions[,1] <- dataColumns # Variable names passed by user
+
+        # In-Cluster Means
+        tmp_clusterVarDescriptions[,2] <- sapply( # Vector of means for each variable in in-cluster data
+          tmp_inClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
         )
 
-      # Calculate In-/Out-Cluster Pooled Variance
-      # NOTE: Only ever two 'samples' because we are looking at in-/out-cluster groups
-      # NOTE: Pooled variance is ( (n_1-1)*var_1 + (n_2-1)*var_2 ) / (n_1 + n_2 - 2) <https://en.wikipedia.org/wiki/Pooled_variance>
+        # In-/Out-Cluster Mean Diffs
+        tmp_clusterVarDescriptions[,3] <- tmp_clusterVarDescriptions[,2] -
+          sapply( # Vector of means for each variable in out-cluster data
+            tmp_outClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
+          )
 
-      if(dim(tmp_inClusterStdDiffData)[1] > 1 & dim(tmp_outClusterStdDiffData)[1] > 1)
-      {
-        tmp_currentPooledVariance <- (
-          ( (dim(tmp_inClusterStdDiffData)[1]  - 1) * sapply(tmp_inClusterStdDiffData,  FUN = function(x) {var(x, na.rm = T)}) ) +
-          ( (dim(tmp_outClusterStdDiffData)[1] - 1) * sapply(tmp_outClusterStdDiffData, FUN = function(x) {var(x, na.rm = T)}) )
-        ) / (
-          dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
-        )
-      } else # Else, at least one of the in-/out-cluster datasets has 1 observation
-      {
-        if(dim(tmp_inClusterStdDiffData)[1] == 1)
+        # Calculate In-/Out-Cluster Pooled Variance
+        # NOTE: Only ever two 'samples' because we are looking at in-/out-cluster groups
+        # NOTE: Pooled variance is ( (n_1-1)*var_1 + (n_2-1)*var_2 ) / (n_1 + n_2 - 2) <https://en.wikipedia.org/wiki/Pooled_variance>
+
+        if(dim(tmp_inClusterStdDiffData)[1] > 1 & dim(tmp_outClusterStdDiffData)[1] > 1)
         {
           tmp_currentPooledVariance <- (
-            rep(0, dim(tmp_inClusterStdDiffData)[2]) +
+            ( (dim(tmp_inClusterStdDiffData)[1]  - 1) * sapply(tmp_inClusterStdDiffData,  FUN = function(x) {var(x, na.rm = T)}) ) +
             ( (dim(tmp_outClusterStdDiffData)[1] - 1) * sapply(tmp_outClusterStdDiffData, FUN = function(x) {var(x, na.rm = T)}) )
           ) / (
             dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
           )
-        }
-
-        if(dim(tmp_outClusterStdDiffData)[1] == 1)
+        } else # Else, at least one of the in-/out-cluster datasets has 1 observation
         {
-          tmp_currentPooledVariance <- (
-            ( (dim(tmp_inClusterStdDiffData)[1]  - 1) * sapply(tmp_inClusterStdDiffData,  FUN = function(x) {var(x, na.rm = T)}) ) +
-            ( rep(0, dim(tmp_outClusterStdDiffData)[2]) )
-          ) / (
-            dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
+          if(dim(tmp_inClusterStdDiffData)[1] == 1)
+          {
+            tmp_currentPooledVariance <- (
+              rep(0, dim(tmp_inClusterStdDiffData)[2]) +
+              ( (dim(tmp_outClusterStdDiffData)[1] - 1) * sapply(tmp_outClusterStdDiffData, FUN = function(x) {var(x, na.rm = T)}) )
+            ) / (
+              dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
+            )
+          }
+
+          if(dim(tmp_outClusterStdDiffData)[1] == 1)
+          {
+            tmp_currentPooledVariance <- (
+              ( (dim(tmp_inClusterStdDiffData)[1]  - 1) * sapply(tmp_inClusterStdDiffData,  FUN = function(x) {var(x, na.rm = T)}) ) +
+              ( rep(0, dim(tmp_outClusterStdDiffData)[2]) )
+            ) / (
+              dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
+            )
+          }
+        }
+
+        # In-/Out-Cluster Std Mean Diffs
+        tmp_clusterVarDescriptions[,4] <- tmp_clusterVarDescriptions[,3] / sqrt(tmp_currentPooledVariance)
+
+        # Pooled Variance
+        tmp_clusterVarDescriptions[,5] <- sqrt(tmp_currentPooledVariance)
+
+        # In-/Out-Cluster Mean Diffs
+        tmp_clusterVarDescriptions[,6] <- sapply( # Vector of means for each variable in out-cluster data
+            tmp_outClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
+          )
+
+        # Sort by strength of standard mean differences
+        tmp_clusterVarDescriptions <- tmp_clusterVarDescriptions[order(tmp_clusterVarDescriptions[,"Std Mean Diff"], decreasing =  T), ]
+
+
+        if(tmp_currentCluster == 1)
+        {
+          # Create storage list
+          tmp_singleClusterDescriptionStorage = list(
+            list(
+              tmp_clusterProportions,
+              tmp_clusterVarDescriptions
+            )
+          )
+        } else
+        {
+          tmp_singleClusterDescriptionStorage[tmp_currentCluster] = list(
+            list(
+              tmp_clusterProportions,
+              tmp_clusterVarDescriptions
+            )
           )
         }
       }
 
-      # In-/Out-Cluster Std Mean Diffs
-      tmp_clusterVarDescriptions[,4] <- tmp_clusterVarDescriptions[,3] / sqrt(tmp_currentPooledVariance)
-
-      # Pooled Variance
-      tmp_clusterVarDescriptions[,5] <- sqrt(tmp_currentPooledVariance)
-
-      # In-/Out-Cluster Mean Diffs
-      tmp_clusterVarDescriptions[,6] <- sapply( # Vector of means for each variable in out-cluster data
-          tmp_outClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
-        )
-
-      # Sort by strength of standard mean differences
-      tmp_clusterVarDescriptions <- tmp_clusterVarDescriptions[order(tmp_clusterVarDescriptions[,"Std Mean Diff"], decreasing =  T), ]
-
-
-      if(tmp_currentCluster == 1)
+      # All descriptions for the current clustering solution are now complete
+      # If working on the first clustering solution, initialize the overall storage list
+      if(tmp_clustSolution == clusterSolutions[1])
       {
-        # Create storage list
-        tmp_singleClusterDescriptionStorage = list(
-          list(
-            tmp_clusterProportions,
-            tmp_clusterVarDescriptions
-          )
-        )
-      } else
+        tmp_solutionDescriptionIndex <- 1
+
+        tmp_clusterDescriptionsStorage <- list(tmp_singleClusterDescriptionStorage)
+
+      } else # Else if creating the second or latter solution, add to the storage list
       {
-        tmp_singleClusterDescriptionStorage[tmp_currentCluster] = list(
-          list(
-            tmp_clusterProportions,
-            tmp_clusterVarDescriptions
-          )
-        )
+        tmp_solutionDescriptionIndex <- tmp_solutionDescriptionIndex + 1
+
+        tmp_clusterDescriptionsStorage[tmp_solutionDescriptionIndex] <- list(tmp_singleClusterDescriptionStorage)
       }
-    }
 
-    # All descriptions for the current clustering solution are now complete
-    # If working on the first clustering solution, initialize the overall storage list
-    if(tmp_clustSolution == clusterSolutions[1])
-    {
-      tmp_solutionDescriptionIndex <- 1
+    } # End loop over each solution to create descriptions
+  } # End loop for [includeClusterDescriptions]
 
-      tmp_clusterDescriptionsStorage <- list(tmp_singleClusterDescriptionStorage)
 
-    } else # Else if creating the second or latter solution, add to the storage list
-    {
-      tmp_solutionDescriptionIndex <- tmp_solutionDescriptionIndex + 1
 
-      tmp_clusterDescriptionsStorage[tmp_solutionDescriptionIndex] <- list(tmp_singleClusterDescriptionStorage)
-    }
-
+  # Begin metrics ---------------------------------------------------------
+  if(includeClusterMetrics)
+  {
+    print("Get metrics")
   }
 
-
-  # Export output to excel
+  # Export output to excel ------------------------------------------------
   if(exportOutput)
   {
     require(openxlsx)
@@ -587,11 +591,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     {
       exportSignificantDigits <- 1
     }
-
-
-
-# HERE BRUH ---------------------------------------------------------------
-
 
     # Set which table rows to write to
     tmp_titleRow <- 2
@@ -694,9 +693,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
     } # End [calledFromMetrics] if statement
 
-
-
-# BRUH4 -------------------------------------------------------------------
 
     # Iterate over each cluster solution
     for(s in 1:length(tmp_clusterDescriptionsStorage))
@@ -824,16 +820,16 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       }
 
       # Plot if requested
-      if(ifMakeRadarPlots | ifMakeDistributionPlots)
+      if(includeRadarPlots | includeDistributionPlots)
       {
         # Set start rows for plots depending on if both sets of plots are present or not
-        if(ifMakeRadarPlots)
+        if(includeRadarPlots)
         {
           tmp_radarPlotStartRow = tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
           tmp_radarPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
 
           # If there are also distribution plots requested, set those values based on the radar plot start row value
-          if(ifMakeDistributionPlots & tmp_numClustersInSolution >= 3) # If there are 3 or more clusters, than radar plots are viable for this solution [s]
+          if(includeDistributionPlots & tmp_numClustersInSolution >= 3) # If there are 3 or more clusters, than radar plots are viable for this solution [s]
           {
             tmp_distrPlotStartRow = tmp_radarPlotStartRow + 24 # [tmp_radarPlotStartRow] plus 24 rows to skip radar plots (size of plot at 4 inches high)
             tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
@@ -889,8 +885,8 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           #   )))
         }
 
-        # If [ifMakeRadarPlots], make radar plots
-        if(ifMakeRadarPlots)
+        # If [includeRadarPlots], make radar plots
+        if(includeRadarPlots)
         {
           # Radar charts must have 3 or more points. If only two clusters are present, skip charting for this solution
           if(tmp_numClustersInSolution < 3)
@@ -938,10 +934,10 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
             }
 
           } # End multivar radar plots
-        } # End [ifMakeRadarPlots]
+        } # End [includeRadarPlots]
 
-        # If [ifMakeDistributionPlots], plot distribution plots
-        if(ifMakeDistributionPlots)
+        # If [includeDistributionPlots], plot distribution plots
+        if(includeDistributionPlots)
         {
           # If there are more clusters than colors assigned (max of 20), then print warning and change plot row to account for it
           if(tmp_ifTooManyClustersForColors)
@@ -964,8 +960,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           #
           # # IF not last cluster in solution, iterate table columns
           # tmp_currentPlotCol <- tmp_currentPlotCol + 6
-
-# BRUH 3
 
           # NOTE: This function only has enough colors to plot 20 plots
           tmp_numPlottableClustersInSolution <- min(tmp_numClustersInSolution, 20) # Set the clusters to plot to be 20 if actual solution has more
@@ -1136,7 +1130,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
           } # End loop iterating over all variables
 
-        } # End [ifMakeDistributionPlots]
+        } # End [includeDistributionPlots]
 
       } # End plots for export
 
