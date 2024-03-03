@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2023-12-29
-# Updated: 2024-03-01
+# Updated: 2024-03-03
 # -------------------------------------------------------------------------
 
 
@@ -136,14 +136,21 @@ ifMakeRadarPlots = FALSE
 ifMakeDistributionPlots = TRUE
 
 
-# foo <- describeClusters(clusterData, uniqueID, clusterSolutions, dataColumns = dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = TRUE, ifMakeDistributionPlots = TRUE)
+foo <- describeClusters(clusterData, uniqueID, clusterSolutions, dataColumns = dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = TRUE, ifMakeDistributionPlots = TRUE)
+foo <- describeClusters(
+  clusterData = clustDat
+  , uniqueID = "GEOID20"
+  , clusterSolutions = c(2:20)
+  , dataColumns = c("lclzd_JobsAndPopulation_std", "lclzd_NumberOfBorderingRoads_std", "lclzd_MedianValue_std")
+  , ifMakeRadarPlots = TRUE
+  )
 
 clusterDistances <- dist(clusterData %>% select(lclzd_JobsAndPopulation_std, lclzd_NumberOfBorderingRoads_std, lclzd_MedianValue_std)
   , method = "euclidean")
 
 clusterMetrics = ""
 
-describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNamesColumns = "", dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = FALSE, ifMakeDistributionPlots = TRUE)
+describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterNamesColumns = "", exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, ifMakeRadarPlots = FALSE, ifMakeDistributionPlots = TRUE)
 {
   ## FUNCTION - Cluster Descriptions
   # Inputs:
@@ -175,11 +182,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
 
   # Check inputs ----------------------------------------------------------
 
-  # Confirm [clusterData] is a data.frame, or convert if it is a matrix
-  if(class(clusterData)[1] == "matrix")
-  {
-    clusterData = as.data.frame(clusterData)
-  }
+  # Confirm [clusterData] is a data.frame
   if(!class(clusterData) == "data.frame")
   {
     stop("[ClusterData] must be a data.frame")
@@ -369,6 +372,11 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
     )
   }
 
+# HERE !! -----------------------------------------------------------------
+
+
+
+
   # Reorder [clusterSolutions] and [clusterNamesColumns] by number of clusters (i.e. max cluster ID by column)
   if(any(clusterNamesColumns != ""))
   {
@@ -377,16 +385,29 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
           sapply(clusterData %>% select(all_of(clusterSolutions)), max)
           )
       ]
-  }
 
-  clusterSolutions <- clusterSolutions[
+    clusterSolutions <- clusterSolutions[
       order(
         sapply(clusterData %>% select(all_of(clusterSolutions)), max)
         )
     ]
 
-  clusterNamesColumns <- as.data.frame(t(clusterNamesColumns))
-  names(clusterNamesColumns) <- clusterSolutions
+    clusterNames <- as.data.frame(t(clusterNamesColumns))
+    names(clusterNames) <- clusterSolutions
+
+  } else
+  {
+    clusterSolutions <- clusterSolutions[
+      order(
+        sapply(clusterData %>% select(all_of(clusterSolutions)), max)
+        )
+    ]
+
+    clusterNames <- as.data.frame(matrix("", 1,length(clusterSolutions)))
+    names(clusterNames) <- clusterSolutions
+  }
+
+
 
 
   # Begin descriptions ----------------------------------------------------
@@ -399,14 +420,13 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
     print(paste0("Generating cluster descriptions for solution [", tmp_clustSolution,"]"))
 
     # Set cluster names if available
-    if(clusterNamesColumns[1,tmp_clustSolution] == "")
+    if(clusterNames[1,tmp_clustSolution] == "")
     {
       tmp_currentSolutionNames <- ""
     } else
-    # if(clusterNamesColumns != "" | clusterNamesColumns[1, tmp_clustSolution] != "")
     {
       # Set current cluster solution name col based on ID col
-      tmp_namesCol <- clusterNamesColumns[1, tmp_clustSolution]
+      tmp_namesCol <- clusterNames[1, tmp_clustSolution]
 
       # Get unique pairs of cluster IDs/names
       tmp_currentSolutionNames <- unique(clusterData[,c(tmp_namesCol, tmp_clustSolution)])
@@ -439,7 +459,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
       # Proportion
       tmp_clusterProportions[1,4] <- table(clusterData[, tmp_clustSolution])[tmp_currentCluster] / sum( table(clusterData[, tmp_clustSolution]) )
       # Cluster name
-      if(length(tmp_currentSolutionNames) == 2)
+      if(length(tmp_currentSolutionNames) == 2) # This check if there are names for clusters, even if some are blanks ("")
       {
         tmp_clusterProportions[1,5] <- tmp_currentSolutionNames[which(tmp_currentSolutionNames[,2] == tmp_currentCluster),1]
       } else
@@ -448,54 +468,54 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
       }
 
       # Pull out variables in [dataColumns] for current cluster ID within the current cluster solution
-      tmp_inClusterStdDiff <- clusterData[which(clusterData[,tmp_clustSolution] == tmp_currentCluster), ] %>% select(all_of(dataColumns))
-      tmp_outClusterStdDiff <- clusterData[which(clusterData[,tmp_clustSolution] != tmp_currentCluster), ] %>% select(all_of(dataColumns))
+      tmp_inClusterStdDiffData <- clusterData[which(clusterData[,tmp_clustSolution] == tmp_currentCluster), ] %>% select(all_of(dataColumns))
+      tmp_outClusterStdDiffData <- clusterData[which(clusterData[,tmp_clustSolution] != tmp_currentCluster), ] %>% select(all_of(dataColumns))
 
       # Variable
       tmp_clusterVarDescriptions[,1] <- dataColumns # Variable names passed by user
 
       # In-Cluster Means
       tmp_clusterVarDescriptions[,2] <- sapply( # Vector of means for each variable in in-cluster data
-        tmp_inClusterStdDiff, FUN = function(x) {mean(x, na.rm = T)}
+        tmp_inClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
       )
 
       # In-/Out-Cluster Mean Diffs
       tmp_clusterVarDescriptions[,3] <- tmp_clusterVarDescriptions[,2] -
         sapply( # Vector of means for each variable in out-cluster data
-          tmp_outClusterStdDiff, FUN = function(x) {mean(x, na.rm = T)}
+          tmp_outClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
         )
 
       # Calculate In-/Out-Cluster Pooled Variance
       # NOTE: Only ever two 'samples' because we are looking at in-/out-cluster groups
       # NOTE: Pooled variance is ( (n_1-1)*var_1 + (n_2-1)*var_2 ) / (n_1 + n_2 - 2) <https://en.wikipedia.org/wiki/Pooled_variance>
 
-      if(dim(tmp_inClusterStdDiff)[1] > 1 & dim(tmp_outClusterStdDiff)[1] > 1)
+      if(dim(tmp_inClusterStdDiffData)[1] > 1 & dim(tmp_outClusterStdDiffData)[1] > 1)
       {
         tmp_currentPooledVariance <- (
-          ( (dim(tmp_inClusterStdDiff)[1]  - 1) * sapply(tmp_inClusterStdDiff,  FUN = function(x) {var(x, na.rm = T)}) ) +
-          ( (dim(tmp_outClusterStdDiff)[1] - 1) * sapply(tmp_outClusterStdDiff, FUN = function(x) {var(x, na.rm = T)}) )
+          ( (dim(tmp_inClusterStdDiffData)[1]  - 1) * sapply(tmp_inClusterStdDiffData,  FUN = function(x) {var(x, na.rm = T)}) ) +
+          ( (dim(tmp_outClusterStdDiffData)[1] - 1) * sapply(tmp_outClusterStdDiffData, FUN = function(x) {var(x, na.rm = T)}) )
         ) / (
-          dim(tmp_inClusterStdDiff)[1] + dim(tmp_outClusterStdDiff)[1] - 2
+          dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
         )
       } else # Else, at least one of the in-/out-cluster datasets has 1 observation
       {
-        if(dim(tmp_inClusterStdDiff)[1] == 1)
+        if(dim(tmp_inClusterStdDiffData)[1] == 1)
         {
           tmp_currentPooledVariance <- (
-            rep(0, dim(tmp_inClusterStdDiff)[2]) +
-            ( (dim(tmp_outClusterStdDiff)[1] - 1) * sapply(tmp_outClusterStdDiff, FUN = function(x) {var(x, na.rm = T)}) )
+            rep(0, dim(tmp_inClusterStdDiffData)[2]) +
+            ( (dim(tmp_outClusterStdDiffData)[1] - 1) * sapply(tmp_outClusterStdDiffData, FUN = function(x) {var(x, na.rm = T)}) )
           ) / (
-            dim(tmp_inClusterStdDiff)[1] + dim(tmp_outClusterStdDiff)[1] - 2
+            dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
           )
         }
 
-        if(dim(tmp_outClusterStdDiff)[1] == 1)
+        if(dim(tmp_outClusterStdDiffData)[1] == 1)
         {
           tmp_currentPooledVariance <- (
-            ( (dim(tmp_inClusterStdDiff)[1]  - 1) * sapply(tmp_inClusterStdDiff,  FUN = function(x) {var(x, na.rm = T)}) ) +
-            ( rep(0, dim(tmp_outClusterStdDiff)[2]) )
+            ( (dim(tmp_inClusterStdDiffData)[1]  - 1) * sapply(tmp_inClusterStdDiffData,  FUN = function(x) {var(x, na.rm = T)}) ) +
+            ( rep(0, dim(tmp_outClusterStdDiffData)[2]) )
           ) / (
-            dim(tmp_inClusterStdDiff)[1] + dim(tmp_outClusterStdDiff)[1] - 2
+            dim(tmp_inClusterStdDiffData)[1] + dim(tmp_outClusterStdDiffData)[1] - 2
           )
         }
       }
@@ -508,7 +528,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, clusterNam
 
       # In-/Out-Cluster Mean Diffs
       tmp_clusterVarDescriptions[,6] <- sapply( # Vector of means for each variable in out-cluster data
-          tmp_outClusterStdDiff, FUN = function(x) {mean(x, na.rm = T)}
+          tmp_outClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
         )
 
       # Sort by strength of standard mean differences
