@@ -56,6 +56,7 @@
 
 # Add functionality without variance so a set of singletons can be compared
 
+
 # Any way to look for missing combinations? business opportunity for gap in the market
 
 # Add variable precision and units secondary table
@@ -70,16 +71,11 @@
 # Create structure overview
 
 
-# Add header page to excel output with metrics if descriptions fcn was called from metrics fcn
-# Add header page to excel output with proportions
 # Try with clusters of single values for div 0 errors
-# Add distr plots for each variable by cluster, one plot per var
-# NOTE: If more than 20 clusters, colors are annoying, use [tmp_ifTooManyClustersForColors] from cluster assignment
 
-# Add single variable description for R
-# Add confusion matrices for cross-cluster comparison
+# Add single variable description for R using returned descriptions list from main function
+# Add confusion tables to compare movemnt of observations across clusters
 
-# Add cluster size table for each solution before cluster breakouts
 
 # Force solutions to end up as 1:n if any clusters are missing in between
 
@@ -572,7 +568,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
 
   # Begin metrics ---------------------------------------------------------
-  if(includeClusterFitMetrics)
+  if(includeClusterFitMetrics & clusterDistances != "")
   {
     require(fpc)
 
