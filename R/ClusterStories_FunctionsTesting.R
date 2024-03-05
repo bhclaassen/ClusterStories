@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2023-12-29
-# Updated: 2024-03-03
+# Updated: 2024-03-05
 # -------------------------------------------------------------------------
 
 
@@ -65,17 +65,20 @@
 
 # Add one-pager describing how to use product
 
-# Add vector to change colors of pos and neg sig
-# Add vector to change distr plot colors
-
 # Create structure overview
 
+# Test input values
+# Test [clusterSolutionsToFitMetricsOn]
+
+# Drop all vars after done useing them?
 
 # Try with clusters of single values for div 0 errors
 
 # Add single variable description for R using returned descriptions list from main function
 # Add confusion tables to compare movemnt of observations across clusters
 
+# Add nice names for metric printing
+# CHECK CLUSTER METRICS, CAN PLOT THEM ALL? NO, NO I CAN'T
 
 # Force solutions to end up as 1:n if any clusters are missing in between
 
@@ -90,6 +93,7 @@
 # <https://www.statisticshowto.com/probability-and-statistics/statistics-definitions/cohens-d/>
 
 
+# DOES R HAVE A DEBUG MODE LIKE PYCHARM?!
 # -------------------------------------------------------------------------
 
 library(tidyverse)
@@ -145,7 +149,7 @@ clusterDistances <- dist(clusterData %>% select(all_of(dataColumns))
 
 clusterFitMetrics = ""
 
-describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterNamesColumns = "", clusterDistances = "", clusterFitMetrics = "", clusterSolutionToFitMetricsOn = "", exportOutput = TRUE, exportSignificantDigits = 3, includeRadarPlots = FALSE, includeDistributionPlots = TRUE, includeClusterDescriptions = TRUE, includeClusterFitMetrics = TRUE)
+describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterNamesColumns = "", clusterDistances = "", clusterFitMetrics = "", clusterSolutionsToFitMetricsOn = "", exportOutput = TRUE, exportSignificantDigits = 3, includeRadarPlots = FALSE, includeDistributionPlots = TRUE, includeClusterDescriptions = TRUE, includeClusterFitMetrics = TRUE, positiveNegativeSignificanceColors = "", distributionPlotColors = "")
 {
   ## FUNCTION - Cluster Descriptions
   # Inputs:
@@ -568,17 +572,24 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
 
   # Begin metrics ---------------------------------------------------------
-  if(includeClusterFitMetrics & clusterDistances != "")
+  # If [includeClusterFitMetrics] is TRUE but no distances are given, then fit metrics cannot be calculated
+  if(includeClusterFitMetrics & length(clusterDistances) == 1)
+  {
+    includeClusterFitMetrics = FALSE
+    print("NOTE: Calculating fit metrics require distances given in [clusterDistances]. [includeClusterFitMetrics] changed to FALSE")
+  }
+
+  if(includeClusterFitMetrics)
   {
     require(fpc)
 
-    if(clusterSolutionToFitMetricsOn[1] == "")
+    if(clusterSolutionsToFitMetricsOn[1] == "")
     {
       metricClusterSolutions <- clusterSolutions
       tmp_numClustSolutions <- length(metricClusterSolutions)
     } else
     {
-      metricClusterSolutions <- clusterSolutionToFitMetricsOn
+      metricClusterSolutions <- clusterSolutionsToFitMetricsOn
       tmp_numClustSolutions <- length(metricClusterSolutions)
     }
 
@@ -618,7 +629,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     # Calculate cluster metrics for each [metricClusterSolutions]
     for(tmp_clustSolution in metricClusterSolutions)
     {
-      print(paste0("Fitting metrics for [k=", tmp_clustFitMetricStorage %>% filter(ClusterSolutionName == tmp_clustSolution) %>% select(NumClusters), "]"))
+      print(paste0("Fitting metrics for [", tmp_clustSolution, "]"))
 
       tmp_clustIDs <- unlist(clusterData %>% select(all_of(tmp_clustSolution))) # Store cluster IDs
       tmp_clustStats <- cluster.stats(clusterDistances, tmp_clustIDs) # Get cluster statistics
@@ -639,6 +650,8 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       rm(tmp_clustStats)
     }
   }
+
+
 
   # Export output to excel ------------------------------------------------
   if(exportOutput)
@@ -664,8 +677,16 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     tmp_wb <- createWorkbook()
 
     # Formats
-    tmp_style_posSig <- createStyle(bgFill = "#33F5B7")
-    tmp_style_negSig <- createStyle(bgFill = "#FCB099")
+    if(length(positiveNegativeSignificanceColors) == 2)
+    {
+      tmp_style_posSig <- createStyle(bgFill = positiveNegativeSignificanceColors[1])
+      tmp_style_negSig <- createStyle(bgFill = positiveNegativeSignificanceColors[2])
+    } else
+    {
+      tmp_style_posSig <- createStyle(bgFill = "#33F5B7")
+      tmp_style_negSig <- createStyle(bgFill = "#FCB099")
+    }
+
     tmp_style_clusterHeader <- createStyle(fontSize = 14, textDecoration = "Bold")
     tmp_style_count <- createStyle(numFmt="#,##0")
     tmp_style_pct <- createStyle(numFmt="0.0%")
@@ -736,8 +757,32 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       addWorksheet(tmp_wb, "Cluster Metrics")
       writeData(tmp_wb, "Cluster Metrics", tmp_clustFitMetricStorage, startCol = 2, startRow = 2)
 
+      # If any cluster solutions have been excluded from the metrics calculations, then note their exclusion in the 'Cluster Metrics' tab
+      if( !all(clusterSolutions %in% clusterSolutionsToFitMetricsOn) )
+      {
+        # Set start column for listing missing solutions from metrics:
+        #   => [2 for space for metrics table]
+        #      + [2 for metrics table headers (solution name and number of clusters)]
+        #      + [the number metrics included (length(clusterFitMetrics))]
+        #      + [3 for spacing from table and to be outside of graphs if list of exclusions is long]
+        tmp_startExcludedMetricsSolutionNotesColumn <- 2 + 2 + length(clusterFitMetrics) + 3
+
+        # Pull missing solutions
+        tmp_metricsExclusionsList <- clusterSolutions[which(!(clusterSolutions %in% clusterSolutionsToFitMetricsOn))]
+
+        # Write note of missing solutions
+        writeData(tmp_wb, "Cluster Metrics", "Clusters excluded from fit metrics calculations:", startRow = 2, startCol = tmp_startExcludedMetricsSolutionNotesColumn)
+        addStyle(tmp_wb, "Cluster Metrics", style=tmp_style_bold, rows = 2, cols = tmp_startExcludedMetricsSolutionNotesColumn)
+
+        for(tmp_excludedSolutionNumber in 1:length(tmp_metricsExclusionsList))
+        {
+          writeData(tmp_wb, "Cluster Metrics", tmp_metricsExclusionsList[tmp_excludedSolutionNumber], startCol = tmp_startExcludedMetricsSolutionNotesColumn, startRow = 2+tmp_excludedSolutionNumber)
+        }
+      }
+
+
       # Set rows for spacing out metrics plots
-      tmp_plotStartRow = dim(tmp_clustFitMetricStorage)[1] + 4 # 3 rows below the end of the [tmp_clustFitMetricStorage] table
+      tmp_plotStartRow = dim(tmp_clustFitMetricStorage)[1] + 5 # 5 rows below the end of the [tmp_clustFitMetricStorage] table
       tmp_plotRowIncrease = 22 # Number of rows to match 4 inches of plot height plus a margin
       tmp_numPlots = 0 # Initialize plot count to 0
 
@@ -756,7 +801,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         tmp_numPlots = tmp_numPlots + 1
       }
 
-    } # End [calledFromMetrics] if statement
+    } # End [includeClusterFitMetrics] if statement
 
 
     # Iterate over each cluster solution
@@ -780,24 +825,34 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       tmp_plotClusterSolution <- clusterSolutions[s]
 
       # Initialize cluster colors
-      tmp_numCluster <- length(unique(clusterData[,tmp_plotClusterSolution]))
       # First eight colors from <https://developer.r-project.org/Blog/public/2019/11/21/a-new-palette-for-r/>
-      tmp_firstEightColors <- c("#000000", "#df536b", "#61d04f", "#2297e6", "#28e2e5", "#cd0bbc", "#f5c710", "#626262")
       # Next twelve from a combination of [RColorBrewer] library
-      tmp_firstTwentyColors <- c(tmp_firstEightColors
-        ,"#276419", "#2D004B", "#D53E4F", "#542788", "#F46D43", "#66C2A5", "#7F3B08", "#7FBC41", "#5E4FA2", "#9E0142", "#DE77AE", "#FDB863")
+      if(distributionPlotColors[1] == "" | (distributionPlotColors[1] != "" & length(distributionPlotColors) < tmp_numClustersInSolution))
+      {
+        tmp_allPlottingColors <- c(
+        "#000000", "#df536b", "#61d04f", "#2297e6"
+        , "#28e2e5", "#cd0bbc", "#f5c710", "#626262"
+        , "#276419", "#2D004B", "#D53E4F", "#542788"
+        , "#F46D43", "#66C2A5", "#7F3B08", "#7FBC41"
+        , "#5E4FA2", "#9E0142", "#DE77AE", "#FDB863")
 
-      if(tmp_numCluster <= 8)
+        if(distributionPlotColors[1] != "" & length(distributionPlotColors) < tmp_numClustersInSolution)
+        {
+          print(paste0("Too few colors were given for solution [", tmp_plotClusterSolution, "] (" , tmp_numClustersInSolution, " clusters). Default colors used for this solution."))
+        }
+      } else
       {
-        tmp_clusterColors <- tmp_firstEightColors[1:tmp_numCluster]
-        tmp_ifTooManyClustersForColors = FALSE
-      } else if(tmp_numCluster <= 20)
+        tmp_allPlottingColors = distributionPlotColors
+      }
+
+      # Assign cluster colors based on number of clusters in current solution
+      if(tmp_numClustersInSolution <= 20)
       {
-        tmp_clusterColors <- tmp_firstTwentyColors[1:tmp_numCluster]
+        tmp_clusterColors <- tmp_allPlottingColors[1:tmp_numClustersInSolution]
         tmp_ifTooManyClustersForColors = FALSE
       } else
       {
-        tmp_clusterColors <- tmp_firstTwentyColors
+        tmp_clusterColors <- tmp_allPlottingColors
         tmp_ifTooManyClustersForColors = TRUE
       }
 
@@ -829,12 +884,13 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       # tmp_clusterColors <- c(palette(rainbow(tmp_numCluster)))
       # tmp_clusterColors <- c("black", brewer.pal((tmp_numCluster-1), "BrBG"))
 
+      # Iterate over clusters and write the stories to the workbook [tmp_wb]
       for(c in 1:tmp_numClustersInSolution)
       {
         # Write cluster number
         writeData(tmp_wb, tmp_worksheetName, paste0("Cluster ", tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]), startCol = tmp_currentCol, startRow = tmp_titleRow)
 
-        # Write cluster name and color
+        # Write cluster name and color to titles
         if(tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,5] != "")
         {
           # Cluster name
@@ -842,7 +898,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           # Cluster color
           # tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
           # addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_clusterColor, cols = tmp_currentCol + 2, rows = tmp_titleRow, stack = F)
-        } else
+        } else # If no cluster name given, only write color
         {
           # Cluster color
           # tmp_style_clusterColor <- createStyle(fgFill = tmp_clusterColors[tmp_clusterDescriptionsStorage[[s]][[c]][[1]][1,1]])
@@ -914,7 +970,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         # Initialize variable means by cluster for current solution
         tmp_currentSolutionMeansStorage <- as.data.frame(matrix(, length(dataColumns), (1+tmp_numClustersInSolution)))
 
-        # Set proper names if given
+        # Set proper names for storage if given
         if( !all(tmp_clusterSolution_clusterNames == "") )
         {
           names(tmp_currentSolutionMeansStorage) <- c("Variable",  tmp_clusterSolution_clusterNames[order(tmp_clusterSolution_clusterNames[,2]),1])
@@ -1026,19 +1082,23 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           # # IF not last cluster in solution, iterate table columns
           # tmp_currentPlotCol <- tmp_currentPlotCol + 6
 
-          # NOTE: This function only has enough colors to plot 20 plots
-          tmp_numPlottableClustersInSolution <- min(tmp_numClustersInSolution, 20) # Set the clusters to plot to be 20 if actual solution has more
+          # NOTE: This function only has enough colors to make max number plots
+          tmp_numPlottableClustersInSolution <- min(tmp_numClustersInSolution, length(tmp_allPlottingColors)) # Set the clusters to plot to be 20 if actual solution has more
 
           # Iterate over each variable and create distribution plots
           for(tmp_currentDistrPlotVariableNumber in 1:dim(tmp_currentSolutionMeansStorage)[1])
           {
-
-            # Iterate over clusters to find max density
+            # Initialize min/max density parameters for current cluster
+            tmp_minDensity_y <- 0
             tmp_maxDensity_y <- 0
+
+            tmp_minDensity_x <- 0
             tmp_maxDensity_x <- 0
+
             # Get data for current var [tmp_currentDistrPlotVariableNumber] across all clusters in current solution [tmp_plotClusterSolution]
             tmp_densityParameterizationData <- clusterData %>% select(all_of(tmp_plotClusterSolution), all_of(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]))
 
+            # Find min/max values for current variable for each cluster in the current solution
             for(tmp_clustInCurrentSolution in 1:tmp_numPlottableClustersInSolution)
             {
               # Check density if cluster has 2 or more observations
@@ -1053,20 +1113,33 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
                   , to = max(tmp_filteredDensityParameterizationData, na.rm = T)
                 )
 
+                # Update variable min/max values (x-axis)
+                if(min(tmp_clusterDen$x) > tmp_minDensity_x) {tmp_minDensity_x = min(tmp_clusterDen$x)}
                 if(max(tmp_clusterDen$x) > tmp_maxDensity_x) {tmp_maxDensity_x = max(tmp_clusterDen$x)}
+
+                # Update density min/max values (y-axis)
+                if(min(tmp_clusterDen$y) > tmp_minDensity_y) {tmp_minDensity_y = min(tmp_clusterDen$y)}
                 if(max(tmp_clusterDen$y) > tmp_maxDensity_y) {tmp_maxDensity_y = max(tmp_clusterDen$y)}
               }
             }
 
-            # If all clusters have a single value, set [tmp_maxDensity] to 1
-            if(tmp_maxDensity_y == 0)
+            # If all clusters have a single value, then set y-values to be [0,1] and x-values to be [min(means), max(means)] +/- (10 of range)
+            if(tmp_minDensity_y == 0 & tmp_maxDensity_y == 0)
             {
-              tmp_maxDensity_y = 1
+              tmp_minDensity_y <- 0
+              tmp_maxDensity_y <- 1
             }
 
-            if(tmp_maxDensity_x == 0)
+            if(tmp_minDensity_x == 0 & tmp_maxDensity_x == 0)
             {
-              tmp_maxDensity_x = 1
+              tmp_minDensity_x <- min(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1])
+              tmp_maxDensity_x <- max(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1])
+
+              tmp_densityRange_x <- tmp_maxDensity_x - tmp_minDensity_x
+
+              tmp_minDensity_x <- tmp_minDensity_x - 0.1 * tmp_densityRange_x
+              tmp_maxDensity_x <- tmp_maxDensity_x + 0.1 * tmp_densityRange_x
+
             }
 
             # Write table for legend - THIS COMES AFTER THE PLOT IN THE FINAL OUTPUT
@@ -1116,7 +1189,8 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
               }
 
               # If cluster has 2 or more observations then plot density, else only plot mean
-              if( dim(tmp_densityParameterizationData[which(tmp_densityParameterizationData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), ])[1] > 1 )
+              tmp_observationsInCurrentClusterDensityCalcs <- dim(tmp_densityParameterizationData[which(tmp_densityParameterizationData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), ])[1]
+              if(tmp_observationsInCurrentClusterDensityCalcs > 1 )
               {
                 tmp_densityData = tmp_densityParameterizationData[which(tmp_densityParameterizationData[,tmp_plotClusterSolution] == tmp_clustInCurrentSolution), tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]]
 
@@ -1128,7 +1202,12 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
                 )
 
                 # Plot density
-                plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(0, tmp_maxDensity_y), xlim = c(0,tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
+                plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(tmp_minDensity_y, tmp_maxDensity_y), xlim = c(tmp_minDensity_x, tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
+              } else if(tmp_observationsInCurrentClusterDensityCalcs == 1 & tmp_clustInCurrentSolution == 1) # If first cluster, and too few obs for a density plot, then create a blank plot to start of process
+              {
+                plot(x=mean( c(tmp_minDensity_x, tmp_maxDensity_x), na.rm = T)
+                  , y=mean( c(tmp_minDensity_y, tmp_maxDensity_y), na.rm = T)
+                  , col = "#ffffff", ylim = c(tmp_minDensity_y, tmp_maxDensity_y), xlim = c(tmp_minDensity_x, tmp_maxDensity_x), xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
               }
 
               # Add mean
