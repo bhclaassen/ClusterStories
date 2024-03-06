@@ -698,7 +698,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     writeData(tmp_wb, "Parameters", "Standard difference threshold:", startCol = 2, startRow = 2)
     writeData(tmp_wb, "Parameters", 0.5, startCol = 3, startRow = 2)
 
-
     # Create cluster sizes workbook
     # Initialize storage for all cluster counts and all cluster proportions
     tmp_clusterCountsTable <- as.data.frame(matrix(, length(clusterSolutions), (max(clusterData %>% select(all_of(clusterSolutions))) - min(clusterData %>% select(all_of(clusterSolutions))) + 1) )) # Rows: number of cluster solutions; Cols: [max cluster number across all solutions] - [min cluster number across all solutions] + 1
@@ -819,7 +818,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
       # Initialize cluster names storage
       tmp_clusterSolution_clusterNames <- as.data.frame(matrix(, tmp_numClustersInSolution, 2))
-      names(tmp_clusterSolution_clusterNames) <- c('clusterName', 'clusterID')
+      names(tmp_clusterSolution_clusterNames) <- c('clusterName', 'tmp_plotClusterID')
 
       # Set current solution name
       tmp_plotClusterSolution <- clusterSolutions[s]
@@ -1082,14 +1081,55 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           {
             # Get data for current var [tmp_currentDistrPlotVariableNumber] across all clusters in current solution [tmp_plotClusterSolution]
             tmp_varDensityData <- clusterData %>% select(all_of(tmp_plotClusterSolution), all_of(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]))
+            names(tmp_varDensityData) <- c("tmp_plotClusterID", "tmp_plotVariable")
+
             # Convert cluster IDs into a factor for ggplot
-            tmp_varDensityData[,1] <- as.factor(tmp_varDensityData[,1])
+            tmp_varDensityData[,"tmp_plotClusterID"] <- as.factor(tmp_varDensityData[,"tmp_plotClusterID"])
+
+            # # Add text for mean, include cluster name if present
+              # if( all(tmp_clusterSolution_clusterNames == "") )
+              # {
+              #   # text(tmp_varMean, tmp_maxDensity*0.9, labels = paste0("k=", tmp_clustInCurrentSolution, "; mean: ", round(tmp_varMean,3)), col = tmp_clusterColors[tmp_clustInCurrentSolution], pos = 4)
+              #   mtext(text = paste0("k=", tmp_clustInCurrentSolution, "; mean: ", round(tmp_varMean,3)), col = tmp_clusterColors[tmp_clustInCurrentSolution], side = 3, at = tmp_varMean, las = 2)
+              # } else
+              # {
+              #   # mtext(tmp_varMean, tmp_maxDensity*1.2, labels = paste0(, "; mean: ", round(tmp_varMean,3)))
+              #   mtext(text = paste0(tmp_clusterSolution_clusterNames[tmp_clustInCurrentSolution,1], "; mean: ", round(tmp_varMean,3)), col = tmp_clusterColors[tmp_clustInCurrentSolution], side = 3, at = tmp_varMean, las = 2)
+              # }
+
+            # Set means by cluster ID
+            tmp_clusterVarMeans <- tmp_varDensityData %>% group_by(tmp_plotClusterID) %>% summarize(clusterMean = mean(tmp_plotVariable, na.rm = T))
+            tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean,3)
+
+            tmp_clusterSolution_clusterNames$clusterID <- as.factor(tmp_clusterSolution_clusterNames$clusterID)
+
+            # Change labels to include means for plotting
+            if(any(tmp_clusterSolution_clusterNames[,1] != "" ))
+            {
+              tmp_clusterVarMeans <- left_join(tmp_clusterVarMeans, tmp_clusterSolution_clusterNames, join_by("tmp_plotClusterID"=="clusterID"))
+            } else
+            {
+              tmp_clusterVarMeans$clusterName <- paste0("k=", tmp_clusterVarMeans$tmp_plotClusterID)
+            }
+
+            tmp_clusterVarMeans$meanPlotLabels <- paste0(tmp_clusterVarMeans$clusterName, " - mean: ", tmp_clusterVarMeans$clusterMean)
+
+            # Attach 'meanPlotLabels' to [tmp_varDensityData]
+            tmp_varDensityData <- left_join(tmp_varDensityData, tmp_clusterVarMeans[, c("tmp_plotClusterID", "meanPlotLabels")], by = "tmp_plotClusterID")
+            tmp_varDensityData$meanPlotLabels <- as.factor(tmp_varDensityData$meanPlotLabels)
 
             # Change density plot line colors by groups
-            ggplot(tmp_varDensityData, aes(x=tmp_varDensityData[,2], color=tmp_varDensityData[,1])) +
-            geom_density()
+            ggplot(tmp_varDensityData, aes(x=tmp_varDensityData[,2], fill = tmp_varDensityData[,3], color=tmp_varDensityData[,3])) +
+            geom_density(alpha = 0.25) +
+            geom_vline(data=tmp_clusterVarMeans, aes(xintercept=clusterMean, color=meanPlotLabels), linetype="dashed") +
+            xlab(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]) +
+            ggtitle( paste0("Distribution of ["
+              , tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]
+              ,"] Values by Cluster") ) +
+            theme(legend.title = element_blank(), legend.position="bottom") +
+            guides(color = guide_legend(nrow = 5))
 
-
+            # annotate(x=27, y=0, label="xyz", color="red") +annotate(x=27, ymin=-1, ymax=1, color="red")
 
 # OLD PLOT CODE - BEGIN ---------------------------------------------------
 
@@ -1199,25 +1239,13 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
                 )
 
                 # Plot density
-                # plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(tmp_minDensity_y, tmp_maxDensity_y), xlim = c(tmp_minDensity_x, tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
+                plot(tmp_clusterDen$x, tmp_clusterDen$y, type = 'l', ylim = c(tmp_minDensity_y, tmp_maxDensity_y), xlim = c(tmp_minDensity_x, tmp_maxDensity_x), col = tmp_clusterColors[tmp_clustInCurrentSolution], xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
 
-                p <- ggplot(tmp_densityData, aes(x= names(tmp_densityData)[2] )) +
-                  geom_density()
-                p
-                # Add mean line
-                p+ geom_vline(aes(xintercept=mean(names(tmp_densityData)[2])),
-                color="blue", linetype="dashed", size=1)
-
-                ggplot(tmp_clusterDen, aes(x=tmp_clusterDen$x, y=tmp_clusterDen$y)) +
-                    geom_line(aes(color=store)) +
-                    scale_color_manual(name='Store', labels=c('A', 'B', 'C'),
-                    values=c('red', 'purple', 'steelblue'))
-
-              } else if(tmp_observationsInCurrentClusterDensityCalcs == 1 & tmp_clustInCurrentSolution == 1) # If first cluster, and too few obs for a density plot, then create a blank plot to start of process
+                              } else if(tmp_observationsInCurrentClusterDensityCalcs == 1 & tmp_clustInCurrentSolution == 1) # If first cluster, and too few obs for a density plot, then create a blank plot to start of process
               {
-                # plot(x=mean( c(tmp_minDensity_x, tmp_maxDensity_x), na.rm = T)
-                #   , y=mean( c(tmp_minDensity_y, tmp_maxDensity_y), na.rm = T)
-                #   , col = "#ffffff", ylim = c(tmp_minDensity_y, tmp_maxDensity_y), xlim = c(tmp_minDensity_x, tmp_maxDensity_x), xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
+                plot(x=mean( c(tmp_minDensity_x, tmp_maxDensity_x), na.rm = T)
+                  , y=mean( c(tmp_minDensity_y, tmp_maxDensity_y), na.rm = T)
+                  , col = "#ffffff", ylim = c(tmp_minDensity_y, tmp_maxDensity_y), xlim = c(tmp_minDensity_x, tmp_maxDensity_x), xlab = tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], ylab = "Relative Density", main = paste0("Distribution plot of [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]"))
               }
 
               # If not first, set plot to add new data
