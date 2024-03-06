@@ -940,6 +940,10 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         tmp_clusterSolution_clusterNames = ""
       }
 
+
+# STOP HERE ---------------------------------------------------------------
+
+
       # Plot if requested
       if(includeRadarPlots | includeDistributionPlots)
       {
@@ -1060,6 +1064,8 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         # If [includeDistributionPlots], plot distribution plots
         if(includeDistributionPlots)
         {
+          require(ggplot2)
+
           # If there are more clusters than colors assigned (max of 20), then print warning and change plot row to account for it
           if(tmp_ifTooManyClustersForColors)
           {
@@ -1162,17 +1168,17 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
               , rows = tmp_distrPlotStartRow + 24
               , cols = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1)
 
-            # Write header for legend table
-            tmp_distrPlotTableHeader <- as.data.frame(matrix("", 1, 3))
-            names(tmp_distrPlotTableHeader) <- c("Cluster Color", "Cluster Name", "Mean")
-            writeData(tmp_wb, tmp_worksheetName
-              , tmp_distrPlotTableHeader
-              , startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1
-              , startRow = tmp_distrPlotStartRow + 25)
-
-            addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_bold
-              , rows = tmp_distrPlotStartRow + 25
-              , cols = ((tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1):((tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 3))
+            # # Write header for legend table
+            # tmp_distrPlotTableHeader <- as.data.frame(matrix("", 1, 3))
+            # names(tmp_distrPlotTableHeader) <- c("Cluster Color", "Cluster Name", "Mean")
+            # writeData(tmp_wb, tmp_worksheetName
+            #   , tmp_distrPlotTableHeader
+            #   , startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1
+            #   , startRow = tmp_distrPlotStartRow + 25)
+            #
+            # addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_bold
+            #   , rows = tmp_distrPlotStartRow + 25
+            #   , cols = ((tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1):((tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 3))
 
 
             # Iterate over each cluster for the current variable and plot the densities
