@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2023-12-29
-# Updated: 2024-03-05
+# Updated: 2024-03-07
 # -------------------------------------------------------------------------
 
 
@@ -53,33 +53,19 @@
 
 # Add check for total sample size >2
 # Make sure distr plots works with single observation (mean only)
-
 # Add functionality without variance so a set of singletons can be compared
-
-
 # Any way to look for missing combinations? business opportunity for gap in the market
-
 # Add variable precision and units secondary table
-# Make distr plots in GGPlot
-# Re-add legend below plot
-
 # Add one-pager describing how to use product
-
 # Create structure overview
-
 # Test input values
 # Test [clusterSolutionsToFitMetricsOn]
-
-# Drop all vars after done useing them?
-
+# Drop all vars after done using them internally?
 # Try with clusters of single values for div 0 errors
-
 # Add single variable description for R using returned descriptions list from main function
 # Add confusion tables to compare movemnt of observations across clusters
-
 # Add nice names for metric printing
 # CHECK CLUSTER METRICS, CAN PLOT THEM ALL? NO, NO I CAN'T
-
 # Force solutions to end up as 1:n if any clusters are missing in between
 
 # Check for FIX comments!!
@@ -92,68 +78,33 @@
 #   - Cohens for >30
 # <https://www.statisticshowto.com/probability-and-statistics/statistics-definitions/cohens-d/>
 
-
 # DOES R HAVE A DEBUG MODE LIKE PYCHARM?!
+
+
 # -------------------------------------------------------------------------
 
-library(tidyverse)
-options(scipen=9999)
-
-setwd("/Users/benclaassen/Documents/_Workshop/_Code Utilities/Statistics/MultivariateDescriptionsPackage/Test Data")
-# save(clustDat, file = "clusterDataAndSolns.Rda") # [clustDat] test data
-load(file = "clusterDataAndSolns.Rda") # [clustDat] test data
-dim(clustDat)
-head(clustDat)
-length(unique(clustDat$GEOID20)) # 9193
-
-# Function - Cluster Metrics ----------------------------------------------
-clusterData = clustDat
-
-uniqueID = 1
-clusterSolutions = c(2:6)
-dataColumns = c(26:28)
-
-# clusterSolutions = sample(c(2:20))
-# clusterData <- cbind(clusterData[,uniqueID], clusterData[, clusterSolutions], clusterData[, c(21:25)], clusterData[, dataColumns])
-# names(clusterData)[1] <- names(clustDat)[1]
-# head(clusterData)
-
-# clusterSolutions = c(2:20)
-# sapply(clusterData %>% select(all_of(clusterSolutions)), max)
-head(clusterData)
-
-# Input vars with names instead of col numbers ->
-uniqueID = names(clusterData)[1]
-clusterSolutions = names(clusterData)[2:6]
-# clusterSolutions = sample(names(clusterData)[2:20])
-dataColumns = names(clusterData)[26:28]
-clusterNamesColumns = ""
-exportOutput = TRUE
-exportSignificantDigits = 3
-calledFromMetrics = FALSE
-includeRadarPlots = FALSE
-includeDistributionPlots = TRUE
-
-
-# foo <- describeClusters(clusterData, uniqueID, clusterSolutions, dataColumns = dataColumns, exportOutput = TRUE, exportSignificantDigits = 3, calledFromMetrics = FALSE, includeRadarPlots = TRUE, includeDistributionPlots = TRUE)
-# foo <- describeClusters(
-#   clusterData = clustDat
-#   , uniqueID = "GEOID20"
-#   , clusterSolutions = c(2:20)
-#   , dataColumns = c("lclzd_JobsAndPopulation_std", "lclzd_NumberOfBorderingRoads_std", "lclzd_MedianValue_std")
-#   , includeRadarPlots = TRUE
-#   )
-
-clusterDistances <- dist(clusterData %>% select(all_of(dataColumns))
-  , method = "euclidean")
-
-clusterFitMetrics = ""
-
-describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterNamesColumns = "", clusterDistances = "", clusterFitMetrics = "", clusterSolutionsToFitMetricsOn = "", exportOutput = TRUE, exportSignificantDigits = 3, includeRadarPlots = TRUE, includeDistributionPlots = TRUE, includeClusterDescriptions = TRUE, includeClusterFitMetrics = TRUE, positiveNegativeSignificanceColors = "", distributionPlotColors = "")
+describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, clusterNamesColumns = "", clusterDistances = "", clusterFitMetrics = "", clusterSolutionsToFitMetricsOn = "", exportSignificantDigits = 3, includeClusterDescriptions = TRUE, includeRadarPlots = TRUE, includeDistributionPlots = TRUE, includeClusterFitMetrics = TRUE, exportOutput = TRUE, positiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), distributionPlotColors = "", dataFormattingMatrix = "")
 {
   ## FUNCTION - Cluster Descriptions
   # Inputs:
-  #    - Data with uniqueID and a list of chosen cluster assignments
+  #    - [clusterData]: Dataset formatted as a data.frame
+  #    - [uniqueID]: Unique ID column name/number for dataset
+  #    - [clusterSolutions]: List of column names/numbers containing cluster ID assignments
+  #    - [dataColumns]: List of column names/numbers containing the data for describing the clusters
+     - [clusterNamesColumns]: List of column names/numbers containing naming information for the cluster IDs (default = "")
+  #    - [clusterDistances]: List of distances between points, from 'dist' command (default = "")
+  #    - [clusterFitMetrics]: List of cluster fit metrics to calculate, from 'cluster.stats' in the {fpc} library (default = "")
+  #    - [clusterSolutionsToFitMetricsOn]: List of cluster solutions in [clusterSolutions] to calculate fit metrics for (default = "")
+     - [exportSignificantDigits] = 3
+  #    - [includeClusterDescriptions]: Bool, if cluster fit descriptions should be calculated (default = TRUE)
+  #    - [includeRadarPlots]: Bool, if radar plots of variable/cluster means should be created (default = TRUE)
+  #    - [includeDistributionPlots]: Bool, if distribution plots of variable/cluster means should be created, requires {ggplot2} library (default = TRUE)
+  #    - [includeClusterFitMetrics]: Bool, if cluster fit metrics should be calculated, requires {fpc} library (default = TRUE)
+  #    - [exportOutput]: Bool, if the results should be exported to a Excel file (default = TRUE)
+  #    - [positiveNegativeSignificanceColors]: List of two colors to replace the significance indicators in the Excel output (default = c("#33F5B7", "#FCB099"))
+     - [distributionPlotColors] = ""
+  #    - [dataFormattingMatrix]: Matrix of data types and data decimals for formatting in Excel export file (default = "" -> this will return 3 decimals for all variables)
+
   # Outputs:
   #    - Cluster description by cluster:
   #         - Number of obs in cluster
@@ -167,11 +118,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   #    - By variable:
   #         - Plot colored histograms of cluster values for each variable with marked means; this will show the distribution
 
-  # [clusterData] requires a data.frame with the following data:
-  #   - [uniqueID]: a column number for the unique IDs
-  #   - [clusterSolutions]: a list of which columns contain the clustering solutions (one column per solution)
-  #   - [clusterNamesColumns]: a list of names for clustering solutions (one column per solution, use [""] or [0] if no names)
-  #   - [dataColumns]: a list of which columns contain the clustering data
 
   require(tidyverse)
   options(scipen = 9999)
@@ -677,14 +623,15 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     tmp_wb <- createWorkbook()
 
     # Formats
-    if(length(positiveNegativeSignificanceColors) == 2)
+    if(length(positiveNegativeSignificanceColors) != 2 | positiveNegativeSignificanceColors == "")
+    {
+      # Defaults:
+      tmp_style_posSig <- createStyle(bgFill = "#33F5B7")
+      tmp_style_negSig <- createStyle(bgFill = "#FCB099")
+    } else
     {
       tmp_style_posSig <- createStyle(bgFill = positiveNegativeSignificanceColors[1])
       tmp_style_negSig <- createStyle(bgFill = positiveNegativeSignificanceColors[2])
-    } else
-    {
-      tmp_style_posSig <- createStyle(bgFill = "#33F5B7")
-      tmp_style_negSig <- createStyle(bgFill = "#FCB099")
     }
 
     tmp_style_clusterHeader <- createStyle(fontSize = 14, textDecoration = "Bold")
@@ -1079,6 +1026,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           # Iterate over each variable and create distribution plots
           for(tmp_currentDistrPlotVariableNumber in 1:dim(tmp_currentSolutionMeansStorage)[1])
           {
+            print(tmp_currentDistrPlotVariableNumber)
             # Get data for current var [tmp_currentDistrPlotVariableNumber] across all clusters in current solution [tmp_plotClusterSolution]
             tmp_varDensityData <- clusterData %>% select(all_of(tmp_plotClusterSolution), all_of(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]))
             names(tmp_varDensityData) <- c("tmp_plotClusterID", "tmp_plotVariable")
