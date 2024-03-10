@@ -23,6 +23,7 @@
 # Add check for total sample size >2
 # Make sure distr plots works with single observation (mean only)
 # Add functionality without variance so a set of singletons can be compared
+
 # Any way to look for missing combinations? business opportunity for gap in the market
 # Add variable precision and units secondary table
 # Add one-pager describing how to use product
@@ -749,7 +750,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_bold, cols = c(tmp_currentCol:(tmp_currentCol+3)), rows = tmp_descriptionRow, stack = F)
 
         # Format numbers using [exportSignificantDigits]
-        addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_float, cols = (tmp_currentCol+1):(tmp_currentCol+3), rows = ((tmp_descriptionRow+1):(tmp_descriptionRow+tmp_numVariables)), stack = F, gridExpand = T)
+        add,Style(tmp_wb, tmp_worksheetName, style=tmp_style_float, cols = (tmp_currentCol+1):(tmp_currentCol+3), rows = ((tmp_descriptionRow+1):(tmp_descriptionRow+tmp_numVariables)), stack = F, gridExpand = T)
 
         # Format standard diffs in descriptions table
         conditionalFormatting(tmp_wb, tmp_worksheetName, cols = tmp_currentCol + 3, rows = c(8:c(8+length(dataColumns))), rule = " > Parameters!$C$2", type = "expression", style = tmp_style_posSig)
