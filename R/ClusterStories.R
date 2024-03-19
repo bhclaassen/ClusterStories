@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-03-10
+# Updated: 2024-03-18
 # -------------------------------------------------------------------------
 
 
@@ -30,13 +30,13 @@
 # Create structure overview
 # Test input values
 # Test [clusterSolutionsToFitMetricsOn]
-# Drop all vars after done using them internally?
 # Try with clusters of single values for div 0 errors
 # Add single variable description for R using returned descriptions list from main function
 # Add confusion tables to compare movement of observations across clusters
 # Add nice names for metric printing
 # CHECK CLUSTER METRICS, CAN PLOT THEM ALL? NO, NO I CAN'T
 # Force solutions to end up as 1:n if any clusters are missing in between
+# What to do if any NAs in [clusterSolutions]
 
 # Check for FIX comments!!
 # Check for TODO comments!!
@@ -154,26 +154,20 @@ fitClusterMetrics <- function(fit_clusterData, fit_clusterSolutionsToFitMetricsO
 
   # Set fit metrics
   # Defaults:
-    # "within.cluster.ss" # Within-cluster sum of squares
-    # "avg.silwidth" # Average silhouette width
-    # "ch" # Calinski-Harabasz index
-    # "wb.ratio" # Within/between SSE ratio
+  # "within.cluster.ss" # Within-cluster sum of squares
+  # "avg.silwidth" # Average silhouette width
+  # "ch" # Calinski-Harabasz index
+  # "wb.ratio" # Within/between SSE ratio
 
-  if(fit_clusterFitMetrics[1] == "")
-  {
-    print("WARNING: No fit metrics given")
-    return(0)
-  } else # Check that each given cluster metric is valid if not using defaults
-  {
-    if(
-      !all(
-        fit_clusterFitMetrics %in%
-        c("n", "cluster.number", "cluster.size", "min.cluster.size", "noisen", "diameter", "average.distance", "median.distance", "separation", "average.toother", "separation.matrix", "ave.between.matrix", "average.between", "average.within", "n.between", "n.within", "max.diameter", "min.separation", "within.cluster.ss", "clus.avg.silwidths", "avg.silwidth", "g2", "g3", "pearsongamma", "dunn", "dunn2", "entropy", "wb.ratio", "ch", "cwidegap", "widestgap", "sindex", "corrected.rand", "vi")
-      )
+  # Check that each given cluster metric is valid if not using defaults
+  if(
+    !all(
+      fit_clusterFitMetrics %in% c("n", "cluster.number", "min.cluster.size", "noisen", "average.between", "average.within", "n.between", "n.within", "max.diameter", "min.separation", "within.cluster.ss", "avg.silwidth", "g2", "g3", "pearsongamma", "dunn", "dunn2", "entropy", "wb.ratio", "ch", "widestgap", "sindex", "corrected.rand", "vi")
+      # c("n", "cluster.number", "cluster.size", "min.cluster.size", "noisen", "diameter", "average.distance", "median.distance", "separation", "average.toother", "separation.matrix", "ave.between.matrix", "average.between", "average.within", "n.between", "n.within", "max.diameter", "min.separation", "within.cluster.ss", "clus.avg.silwidths", "avg.silwidth", "g2", "g3", "pearsongamma", "dunn", "dunn2", "entropy", "wb.ratio", "ch", "cwidegap", "widestgap", "sindex", "corrected.rand", "vi")
     )
-    {
-      stop(paste0("Cluster fit metrics must be from {fpc} package fcn [cluster.stats] \n -> Valid entries: n, cluster.number, cluster.size, min.cluster.size, noisen, diameter, average.distance, median.distance, separation, average.toother, separation.matrix, ave.between.matrix, average.between, average.within, n.between, n.within, max.diameter, min.separation, within.cluster.ss, clus.avg.silwidths, avg.silwidth, g2, g3, pearsongamma, dunn, dunn2, entropy, wb.ratio, ch, cwidegap, widestgap, sindex, corrected.rand, vi"))
-    }
+  )
+  {
+    stop(paste0("Cluster fit metrics must be scalar values from {fpc} package fcn [cluster.stats] \n -> Valid entries: n, cluster.number, min.cluster.size, noisen, average.between, average.within, n.between, n.within, max.diameter, min.separation, within.cluster.ss, avg.silwidth, g2, g3, pearsongamma, dunn, dunn2, entropy, wb.ratio, ch, widestgap, sindex, corrected.rand, vi"))
   }
 
   # Create cluster fit metrics storage matrix
@@ -184,8 +178,8 @@ fitClusterMetrics <- function(fit_clusterData, fit_clusterSolutionsToFitMetricsO
 
   # Add cluster solution names to storage
   tmp_clustFitMetricStorage[,1] <- fit_clusterSolutionsToFitMetricsOn
-  # Fill in 'Cluster Number' column with max of cluster IDs for each solution set, i.e. number of clusters in given solution
-  tmp_clustFitMetricStorage[,2] <- sapply(fit_clusterData %>% select(all_of(fit_clusterSolutionsToFitMetricsOn)), function(x) {length(unique(x))})
+  # Fill in 'Cluster Number' column with max of cluster IDs for each solution set, i.e. number of clusters in given solution excluding NAs
+  tmp_clustFitMetricStorage[,2] <- sapply(fit_clusterData %>% select(all_of(fit_clusterSolutionsToFitMetricsOn)), function(x) {length(table(x))})
 
 
   # Calculate cluster metrics for each [fit_clusterSolutionsToFitMetricsOn]
@@ -198,7 +192,8 @@ fitClusterMetrics <- function(fit_clusterData, fit_clusterSolutionsToFitMetricsO
     # If cluster IDs are not numeric, or are not ordered from 1:(number of clusters) then the 'cluster.stats()' command will not work
     # Therefore, create a new vector of the correct format that overwrites [tmp_clustIDs]
     if(class(tmp_clustIDs) == "character"
-      | !all( sort(unique(tmp_clustIDs)) == c(1:length(unique(tmp_clustIDs))) )
+      | !all( sort(names(table(tmp_clustIDs))) == c(1:length(table(tmp_clustIDs))) )
+      # !all( sort(unique(tmp_clustIDs)) == c(1:length(unique(tmp_clustIDs))) )
       )
     {
       # Create list of unique IDs and sort them
@@ -236,6 +231,19 @@ fitClusterMetrics <- function(fit_clusterData, fit_clusterSolutionsToFitMetricsO
       stop("Number of clusters in solution do not match 'cluster.stats' output")
     }
 
+    # Check if any of the calculated metrics return NULL
+    for(tmp_metric in fit_clusterFitMetrics)
+    {
+      # print(tmp_clustStats[ tmp_metric ])
+      # print(length(tmp_clustStats[ tmp_metric ]))
+      # print(is.null(tmp_clustStats[ tmp_metric ]))
+      # if(tmp_clustStats[ tmp_metric ])
+      if(is.null(unlist(tmp_clustStats[ tmp_metric ])))
+      {
+        tmp_clustStats[ tmp_metric ] = "NA"
+      }
+    }
+
     # Store desired cluster metrics
     tmp_clustFitMetricStorage[tmp_currentSolutionRow, (1:length(fit_clusterFitMetrics) + tmp_numberStartingCols)] <- tmp_clustStats[ fit_clusterFitMetrics ]
 
@@ -245,8 +253,6 @@ fitClusterMetrics <- function(fit_clusterData, fit_clusterSolutionsToFitMetricsO
   return(tmp_clustFitMetricStorage)
 
 } ## END FUNCTION [fitClusterMetrics] ##
-
-
 
 
 # -------------------------------------------------------------------------
@@ -268,24 +274,27 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
       for(tmp_currentCluster in 1:length(table(descr_clusterData[, tmp_clustSolution])) )
       {
         # Initialize storage for current cluster ID within current cluster solution
-        tmp_clusterProportions <- as.data.frame(matrix(, 1, 4)) # Cluster size and proportion
-        names(tmp_clusterProportions) <- c("Cluster Number", "Total Number of Clusters", "Number of Observations", "Proportion")
+        tmp_clusterProportions <- as.data.frame(matrix(, 1, 5)) # Cluster size and proportion
+        names(tmp_clusterProportions) <- c("Cluster Number", "Total Number of Clusters", "Number of Observations", "Proportion", "Original ID")
         tmp_clusterVarDescriptions <- as.data.frame(matrix(, tmp_numVariables, 6)) # Cluster variables description (rows: num variables, cols: 5 metrics)
         names(tmp_clusterVarDescriptions) <- c("Variable", "Mean", "Mean Diff", "Std Mean Diff", "Pooled Std Dev", "Out-Cluster Mean")
 
         ## Fill in description
+        tmp_currentClusterTable <- table(descr_clusterData[, tmp_clustSolution])
         # Current Cluster Number
         tmp_clusterProportions[1,1] <- tmp_currentCluster
         # Total Number of Clusters
-        tmp_clusterProportions[1,2] <- length(table(descr_clusterData[, tmp_clustSolution]))
+        tmp_clusterProportions[1,2] <- length(tmp_currentClusterTable)
         # Number of Observations
-        tmp_clusterProportions[1,3] <- table(descr_clusterData[, tmp_clustSolution])[tmp_currentCluster]
+        tmp_clusterProportions[1,3] <- tmp_currentClusterTable[tmp_currentCluster]
         # Proportion
-        tmp_clusterProportions[1,4] <- table(descr_clusterData[, tmp_clustSolution])[tmp_currentCluster] / sum( table(descr_clusterData[, tmp_clustSolution]) )
+        tmp_clusterProportions[1,4] <- tmp_currentClusterTable[tmp_currentCluster] / sum(tmp_currentClusterTable)
+        # Original cluster number/name
+        tmp_clusterProportions[1,5] <- names(tmp_currentClusterTable)[tmp_currentCluster]
 
         # Pull out variables in [descr_dataColumns] for current cluster ID within the current cluster solution
-        tmp_inClusterStdDiffData <- descr_clusterData[which(descr_clusterData[,tmp_clustSolution] == tmp_currentCluster), ] %>% select(all_of(descr_dataColumns))
-        tmp_outClusterStdDiffData <- descr_clusterData[which(descr_clusterData[,tmp_clustSolution] != tmp_currentCluster), ] %>% select(all_of(descr_dataColumns))
+        tmp_inClusterStdDiffData <- descr_clusterData[which(descr_clusterData[,tmp_clustSolution] == tmp_clusterProportions[1,5]), ] %>% select(all_of(descr_dataColumns))
+        tmp_outClusterStdDiffData <- descr_clusterData[which(descr_clusterData[,tmp_clustSolution] != tmp_clusterProportions[1,5]), ] %>% select(all_of(descr_dataColumns))
 
         # Variable
         tmp_clusterVarDescriptions[,1] <- descr_dataColumns # Variable names passed by user
@@ -396,9 +405,9 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
 # -------------------------------------------------------------------------
 
 
-describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, runQuietly = FALSE, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "")
-# includeClusterDescriptions = TRUE, includeRadarPlots = TRUE, includeDistributionPlots = TRUE, dataFormattingMatrix = "")
-{
+# describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, runQuietly = FALSE, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "", includeClusterDescriptions = TRUE, includeRadarPlots = TRUE, includeDistributionPlots = TRUE)
+# dataFormattingMatrix = "")
+# {
   ## LIBRARY REQUIREMENTS ##
   # - {tidyverse} for general use
   # - {fpc} for clustering fit metrics
@@ -479,6 +488,12 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     stop("[clusterSolutions] must be a list of numbers or strings")
   }
 
+  # There cannot be any NAs in cluster solutions
+  if( any(is.na(clusterData %>% select(all_of(clusterSolutions)))) )
+  {
+    stop("[clusterSolutions] cannot have any NA values")
+  }
+
   # Confirm [dataColumns] are column numbers or column names in [clusterData]
   if( all(sapply(dataColumns, class) == "numeric") | all(sapply(dataColumns, class) == "integer") ) # Check if all [dataColumns] are integers and therefore are assumed to be column numbers
   {
@@ -532,10 +547,10 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     , all_of(dataColumns)
   )
 
-  # Reorder [clusterSolutions] by number of clusters (i.e. max cluster ID by column)
+  # Reorder [clusterSolutions] by number of clusters (i.e. number of unique values excluding NAs)
   clusterSolutions <- clusterSolutions[
     order(
-      sapply(clusterData %>% select(all_of(clusterSolutions)), FUN = function(x) {length(unique(x))})
+      sapply(clusterData %>% select(all_of(clusterSolutions)), FUN = function(x) {length(table(x))}) # Using 'table' here not 'unique' because the latter includes NAs
       )
   ]
 
@@ -549,7 +564,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     require(openxlsx)
 
     # [exportDecimalPlaces] must be a single number, or a data.frame
-    if( (length(exportDecimalPlaces) == 1 & (class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer")) )
+    if( (length(exportDecimalPlaces) == 1 & (class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer") ) )
     {
       # [exportDecimalPlaces] must be a whole number
       exportDecimalPlaces <- round(exportDecimalPlaces)
@@ -592,7 +607,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     # Initialize excel file
     tmp_wb <- createWorkbook()
 
-    # Set Formats #
+    ## Set Formats ##
 
     # Check if there are colors given for [exportPositiveNegativeSignificanceColors], and if they are valid
     ifGivenValidColors <- ifValidColorsCheck(exportPositiveNegativeSignificanceColors)
@@ -609,11 +624,26 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       tmp_style_negSig <- createStyle(bgFill = "#FCB099")
     }
 
+    # Create formatting styles
     tmp_style_header <- createStyle(fontSize = 14, textDecoration = "Bold")
     tmp_style_count <- createStyle(numFmt="#,##0")
     tmp_style_pct <- createStyle(numFmt="0.0%")
+    tmp_style_pctZeroOne <- createStyle(numFmt="0%")
     tmp_style_bold <- createStyle(textDecoration = "Bold")
     tmp_style_boldAndCenter <- createStyle(textDecoration = "Bold", halign = "Center")
+
+    # Create green shade styles for crosswalk tables
+    # tmp_style_greenShade_1 <- createStyle(fgFill = "#ffffff") # Green shading for [0%, 20%)
+    # tmp_style_greenShade_2 <- createStyle(fgFill = "#edf8e9") # Green shading for [20%, 40%)
+    # tmp_style_greenShade_3 <- createStyle(fgFill = "#bae4b3") # Green shading for [40%, 60%)
+    # tmp_style_greenShade_4 <- createStyle(fgFill = "#74c476") # Green shading for [60%, 80%)
+    # tmp_style_greenShade_5 <- createStyle(fgFill = "#238b45") # Green shading for [80%, 100%]
+
+    tmp_style_greenShade_1 <- createStyle(fgFill = "#FFFFFF") # Green shading for [0%, 20%)
+    tmp_style_greenShade_2 <- createStyle(fgFill = "#DBECE0") # Green shading for [20%, 40%)
+    tmp_style_greenShade_3 <- createStyle(fgFill = "#B9DCBF") # Green shading for [40%, 60%)
+    tmp_style_greenShade_4 <- createStyle(fgFill = "#99CCA1") # Green shading for [60%, 80%)
+    tmp_style_greenShade_5 <- createStyle(fgFill = "#7ABC81") # Green shading for [80%, 100%]
 
     if(class(exportDecimalPlaces) == 'data.frame')
     {
@@ -629,6 +659,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     addWorksheet(tmp_wb, "Parameters")
     writeData(tmp_wb, "Parameters", "Standard difference threshold:", startCol = 2, startRow = 2)
     writeData(tmp_wb, "Parameters", 0.5, startCol = 3, startRow = 2)
+
   } # END EXPORT - INITIALIZATION #
 
 
@@ -636,11 +667,20 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   if(includeClusterFitMetrics)
   {
     # If [includeClusterFitMetrics] is TRUE, then check for necessary parameters to fit cluster metrics
-    if(clusterDistances[1] == "")
+    if(!length(clusterDistances) > 1)
     {
       print("NOTE: Distances using the 'dist()' command must be provided in [clusterDistances] for fit metrics to be calculated")
-      includeClusterFitMetrics = FALSE
-    } else
+      includeClusterFitMetrics <- FALSE
+    }
+
+    if(clusterFitMetrics[1] == "")
+    {
+      print("NOTE: [clusterFitMetrics] is blank, no metrics will be fit")
+      includeClusterFitMetrics <- FALSE
+    }
+
+    # If the two conditions above are fulfilled, fit metrics and allow for export
+    if(includeClusterFitMetrics)
     {
       # If no subset of clusters solutions is given specifically for metrics to be fit on, use all cluster solutions
       if(clusterSolutionsToFitMetricsOn[1] == "")
@@ -650,94 +690,96 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
       # Call function [fitClusterMetrics] and store results
       tmp_clusterFitMetrics <- fitClusterMetrics(clusterData, clusterSolutionsToFitMetricsOn, clusterDistances, clusterFitMetrics)
-    }
 
-    # Remove distances for fit metrics (often a very large object)
-    rm(clusterDistances)
+      # Remove distances for fit metrics (often a very large object)
+      rm(clusterDistances)
 
-    # If exporting, add fit metrics data to Excel file from within the [includeClusterFitMetrics] check
-    if(exportOutput)
-    {
-      # Set [tmp_numMetrics] to be the number of metrics fit
-      if(clusterFitMetrics[1] == "")
+
+# HERE --------------------------------------------------------------------
+
+
+      # If exporting, add fit metrics data to Excel file from within the [includeClusterFitMetrics] check
+      if(exportOutput)
       {
-        tmp_numMetrics <- 4
-      } else
-      {
+        # Set [tmp_numMetrics] to be the number of metrics fit
         tmp_numMetrics <- length(clusterFitMetrics)
-      }
 
-      # Create cluster metrics and plots workbook
-      addWorksheet(tmp_wb, "Cluster Metrics")
+        # Create cluster metrics and plots workbook
+        addWorksheet(tmp_wb, "Cluster Metrics")
 
-      # Write table and format header
-      writeData(tmp_wb, "Cluster Metrics", "Cluster Fit Metrics", startRow = 2, startCol = 2)
-      addStyle(tmp_wb, "Cluster Metrics", style = tmp_style_header, rows = 2, cols = 2)
+        # Write table and format header
+        writeData(tmp_wb, "Cluster Metrics", "Cluster Fit Metrics", startRow = 2, startCol = 2)
+        addStyle(tmp_wb, "Cluster Metrics", style = tmp_style_header, rows = 2, cols = 2)
 
-      # Write and format metrics table
-      writeData(tmp_wb, "Cluster Metrics", tmp_clusterFitMetrics, startRow = 3, startCol = 2)
-      addStyle(tmp_wb, "Cluster Metrics", style = tmp_style_boldAndCenter, rows = 3, cols = c(2:(4+tmp_numMetrics-1))) # Format table headers
-      addStyle(tmp_wb, "Cluster Metrics", style = tmp_style_floatMetricsTable, rows = c(4:(4+length(clusterSolutionsToFitMetricsOn)-1)), cols = c(4:(4+tmp_numMetrics-1)), gridExpand = TRUE) # Format decimal precision
+        # Write and format metrics table
+        writeData(tmp_wb, "Cluster Metrics", tmp_clusterFitMetrics, startRow = 3, startCol = 2)
+        addStyle(tmp_wb, "Cluster Metrics", style = tmp_style_boldAndCenter, rows = 3, cols = c(2:(4+tmp_numMetrics-1))) # Format table headers
+        addStyle(tmp_wb, "Cluster Metrics", style = tmp_style_floatMetricsTable, rows = c(4:(4+length(clusterSolutionsToFitMetricsOn)-1)), cols = c(4:(4+tmp_numMetrics-1)), gridExpand = TRUE) # Format decimal precision
+        addStyle(tmp_wb, "Cluster Metrics", style = tmp_style_bold, rows = c(4:(3+dim(tmp_clusterFitMetrics)[1])), cols = 2)
 
-
-      # If any cluster solutions have been excluded from the metrics calculations, then note their exclusion in the 'Cluster Metrics' tab
-      if( !all(clusterSolutions %in% clusterSolutionsToFitMetricsOn) )
-      {
-        # Set start column for listing missing solutions from metrics:
-        #   => [2 for space for metrics table]
-        #      + [2 for metrics table headers (solution name and number of clusters)]
-        #      + [the number metrics included (length(clusterFitMetrics))]
-        #      + [3 for spacing from table and to be outside of graphs if list of exclusions is long]
-        tmp_startExcludedMetricsSolutionNotesColumn <- 2 + 2 + length(clusterFitMetrics) + 2
-
-        # Pull missing solutions
-        tmp_metricsExclusionsList <- clusterSolutions[which(!(clusterSolutions %in% clusterSolutionsToFitMetricsOn))]
-
-        # Write note of missing solutions
-        writeData(tmp_wb, "Cluster Metrics", "Clusters excluded from fit metrics calculations:", startRow = 3, startCol = tmp_startExcludedMetricsSolutionNotesColumn)
-        addStyle(tmp_wb, "Cluster Metrics", style=tmp_style_bold, rows = 3, cols = tmp_startExcludedMetricsSolutionNotesColumn)
-
-        for(tmp_excludedSolutionNumber in 1:length(tmp_metricsExclusionsList))
+        # If any cluster solutions have been excluded from the metrics calculations, then note their exclusion in the 'Cluster Metrics' tab
+        if( !all(clusterSolutions %in% clusterSolutionsToFitMetricsOn) )
         {
-          writeData(tmp_wb, "Cluster Metrics", tmp_metricsExclusionsList[tmp_excludedSolutionNumber], startCol = tmp_startExcludedMetricsSolutionNotesColumn, startRow = 3+tmp_excludedSolutionNumber)
+          # Set start column for listing missing solutions from metrics:
+          #   => [2 for space for metrics table]
+          #      + [2 for metrics table headers (solution name and number of clusters)]
+          #      + [the number metrics included (length(clusterFitMetrics))]
+          #      + [3 for spacing from table and to be outside of graphs if list of exclusions is long]
+          tmp_startExcludedMetricsSolutionNotesColumn <- 2 + 2 + length(clusterFitMetrics) + 2
+
+          # Pull missing solutions
+          tmp_metricsExclusionsList <- clusterSolutions[which(!(clusterSolutions %in% clusterSolutionsToFitMetricsOn))]
+
+          # Write note of missing solutions
+          writeData(tmp_wb, "Cluster Metrics", "Clusters excluded from fit metrics calculations:", startRow = 3, startCol = tmp_startExcludedMetricsSolutionNotesColumn)
+          addStyle(tmp_wb, "Cluster Metrics", style=tmp_style_bold, rows = 3, cols = tmp_startExcludedMetricsSolutionNotesColumn)
+
+          for(tmp_excludedSolutionNumber in 1:length(tmp_metricsExclusionsList))
+          {
+            writeData(tmp_wb, "Cluster Metrics", tmp_metricsExclusionsList[tmp_excludedSolutionNumber], startCol = tmp_startExcludedMetricsSolutionNotesColumn, startRow = 3+tmp_excludedSolutionNumber)
+          }
         }
-      }
 
-      # Set rows for spacing out metrics plots
-      tmp_plotStartRow = dim(tmp_clusterFitMetrics)[1] + 6 # 5 rows below the end of the [tmp_clusterFitMetrics] table
-      tmp_plotRowIncrease = 22 # Number of rows to match 4 inches of plot height plus a margin
-      tmp_numPlots = 0 # Initialize plot count to 0
+        # Set rows for spacing out metrics plots
+        tmp_plotStartRow = dim(tmp_clusterFitMetrics)[1] + 6 # 5 rows below the end of the [tmp_clusterFitMetrics] table
+        tmp_plotRowIncrease = 22 # Number of rows to match 4 inches of plot height plus a margin
+        tmp_numPlots = 0 # Initialize plot count to 0
 
-      # Iterate over fit metrics
-      for(tmp_metricToPlot in 3:dim(tmp_clusterFitMetrics)[2])
-      {
-        plot(c(1:dim(tmp_clusterFitMetrics)[1]), tmp_clusterFitMetrics[,tmp_metricToPlot], type = 'l', main = names(tmp_clusterFitMetrics)[tmp_metricToPlot], xlab = "Cluster Number", xaxt = "n", ylab = "Metric Value")
-        axis(side = 1, at = c(1:dim(tmp_clusterFitMetrics)[1]), labels = tmp_clusterFitMetrics[,1])
-        grid()
+        # Iterate over fit metrics
+        for(tmp_metricToPlot in 3:dim(tmp_clusterFitMetrics)[2])
+        {
+          plot(c(1:dim(tmp_clusterFitMetrics)[1]), tmp_clusterFitMetrics[,tmp_metricToPlot], type = 'l', main = names(tmp_clusterFitMetrics)[tmp_metricToPlot], xlab = "Cluster Number", xaxt = "n", ylab = "Metric Value")
+          axis(side = 1, at = c(1:dim(tmp_clusterFitMetrics)[1]), labels = tmp_clusterFitMetrics[,1])
+          grid()
 
-        # Add plot
-        insertPlot(tmp_wb, "Cluster Metrics", width = 6, height = 4,
-        startRow = tmp_plotStartRow + tmp_plotRowIncrease * tmp_numPlots, startCol = 2, fileType = "png", units = "in", dpi = 300)
+          # Add plot
+          insertPlot(tmp_wb, "Cluster Metrics", width = 6, height = 4,
+          startRow = tmp_plotStartRow + tmp_plotRowIncrease * tmp_numPlots, startCol = 2, fileType = "png", units = "in", dpi = 300)
 
-        # Iterate plot count
-        tmp_numPlots = tmp_numPlots + 1
-      }
+          # Iterate plot count
+          tmp_numPlots = tmp_numPlots + 1
+        }
 
-    } # END EXPORT - FIT METRICS #
+      } # END EXPORT - FIT METRICS #
+
+    } # END OF SECOND [includeClusterFitMetrics] CHECK
 
   } # END FIT METRICS #
 
 
   # Begin descriptions ----------------------------------------------------
-  if(includeClusterDescriptions)
-  {
+  # if(includeClusterDescriptions)
+  # {
 
     # Call function to create cluster descriptions
     tmp_clusterDescriptionsList <- createClusterDescriptions(clusterData, clusterSolutions, dataColumns)
 
     # If exporting output, add cluster descriptions to excel file from within the [includeClusterDescriptions] call
-    if(exportOutput)
-    {
+    # if(exportOutput)
+    # {
+
+      ## ADD CLUSTER SIZES TAB ##
+
       # Create cluster sizes workbook
       # Initialize storage for all cluster counts and all cluster proportions
       tmp_clusterCountsTable <- as.data.frame(matrix(
@@ -775,6 +817,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       tmp_clusterNames <- as.data.frame(matrix(row.names(tmp_clusterCountsTable), dim(tmp_clusterCountsTable)[1], 1))
       names(tmp_clusterNames) <- ""
 
+      # Initialize 'Cluster Sizes' tab
       addWorksheet(tmp_wb, "Cluster Sizes")
       # Add cluster counts table
       writeData(tmp_wb, "Cluster Sizes", "Cluster Counts", startRow = (tmp_countTable_startRow-1), startCol = (tmp_countTable_startCol-1))
@@ -789,21 +832,393 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_header, rows = (tmp_countTable_startRow-1), cols = c(tmp_countTable_startCol-1, tmp_propTable_startCol-1), stack = F)
 
       # Format table column names
-      addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = (tmp_countTable_startRow), cols = c(tmp_countTable_startCol:(tmp_countTable_startCol + dim(tmp_clusterCountsTable)[2] - 1)))
-      addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = (tmp_countTable_startRow), cols = c(tmp_propTable_startCol:(tmp_countTable_startCol + dim(tmp_clusterCountsTable)[2] - 1)))
+      addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = tmp_countTable_startRow, cols = c(tmp_countTable_startCol:(tmp_countTable_startCol + dim(tmp_clusterCountsTable)[2] - 1)))
+      addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = tmp_countTable_startRow, cols = c(tmp_propTable_startCol:(tmp_propTable_startCol + dim(tmp_clusterCountsTable)[2] - 1)))
       # Format table row names
+      addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = c((tmp_countTable_startRow+1):(tmp_countTable_startRow+dim(tmp_clusterNames)[1])), cols = (tmp_countTable_startCol-1))
+      addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = c((tmp_propTable_startRow+1):(tmp_propTable_startRow+dim(tmp_clusterNames)[1])), cols = (tmp_propTable_startCol-1))
 
       # Format count table
       addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_count, rows = ((tmp_countTable_startRow+1):(tmp_countTable_startRow+dim(tmp_clusterCountsTable)[1])) , cols = ((tmp_countTable_startCol):(tmp_countTable_startCol + dim(tmp_clusterCountsTable)[2]-1)), stack = F, gridExpand = T)
       # Format proportions table
       addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_pct, rows = ((tmp_propTable_startRow+1):(tmp_propTable_startRow+dim(tmp_clusterCountsTable)[1])), cols = c((tmp_propTable_startCol):(tmp_propTable_startCol + dim(tmp_clusterCountsTable)[2]-1)), stack = F, gridExpand = T)
 
-      ## ADD STORIES TO EXPORT
+
+      # Add cluster cross-walk tables
+      tmp_crosswalkStartRow <- tmp_countTable_startRow + dim(tmp_clusterCountsTable)[1] + 5
+      tmp_crosswalkStartCol <- 2
+
+      # Write cross-walk tables header
+      writeData(tmp_wb, "Cluster Sizes", "Cluster ID Cross-walks", startRow = tmp_crosswalkStartRow, startCol = tmp_crosswalkStartCol)
+      addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_header, rows = tmp_crosswalkStartRow, cols = tmp_crosswalkStartCol)
+
+      # Increase [tmp_crosswalkStartRow] to start of first table
+      tmp_crosswalkStartRow <- tmp_crosswalkStartRow + 3
+
+      # Create 'Cluster Sizes' tab
+      # Iterate across all needed combinations of solutions
+      for(tmp_crosswalkSolution_1 in 1:(length(clusterSolutions)-1))
+      {
+        # Set number of clusters in solution #1
+        tmp_lengthCrosswalkSolution_1 <- length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_1]]))
+
+        for(tmp_crosswalkSolution_2 in (tmp_crosswalkSolution_1+1):length(clusterSolutions))
+        {
+
+          print(tmp_crosswalkSolution_1, tmp_crosswalkSolution_2)
+          # Set number of clusters in solution #2
+          tmp_lengthCrosswalkSolution_2 <- length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_2]]))
+
+          # Write cluster solution names and directional-read arrows for current table
+          writeData(tmp_wb, "Cluster Sizes", clusterSolutions[tmp_crosswalkSolution_1], startRow = (tmp_crosswalkStartRow+1), startCol = (tmp_crosswalkStartCol-1)) # Cluster solution name for [tmp_crosswalkSolution_1]
+          # writeFormula(tmp_wb, "Cluster Sizes", x="UNICHAR(8595)", startRow = (tmp_crosswalkStartRow+2), startCol = (tmp_crosswalkStartCol-2)) # Cluster solution read-arrow for [tmp_crosswalkSolution_1] (In excel: UNICHAR(8595))
+          writeData(tmp_wb, "Cluster Sizes", clusterSolutions[tmp_crosswalkSolution_2], startRow = (tmp_crosswalkStartRow-1), startCol = (tmp_crosswalkStartCol+1)) # Cluster solution name for [tmp_crosswalkSolution_2]
+          # writeFormula(tmp_wb, "Cluster Sizes", x="UNICHAR(8594)", startRow = (tmp_crosswalkStartRow-1), startCol = (tmp_crosswalkStartCol+1)) # Cluster solution read-arrow for [tmp_crosswalkSolution_2] (In excel: UNICHAR(8594))
+
+
+          # Format cluster solution names
+          addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow+1), cols = (tmp_crosswalkStartCol-1))
+          addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow-1), cols = (tmp_crosswalkStartCol+1))
+
+          # print(paste0(clusterSolutions[tmp_crosswalkSolution_1], ",", clusterSolutions[tmp_crosswalkSolution_2]))
+
+          # Create proportions table of cluster crosswalk table
+          tmp_crosswalkTable <- proportions(
+              table(
+                clusterData[,clusterSolutions[tmp_crosswalkSolution_1]]
+                , clusterData[,clusterSolutions[tmp_crosswalkSolution_2]]
+              )
+              , margin = 1
+            )
+          # print(tmp_crosswalkTable)
+
+          # Write crosswalk table
+          writeData(tmp_wb, "Cluster Sizes", tmp_crosswalkTable, startRow = tmp_crosswalkStartRow, startCol = tmp_crosswalkStartCol)
+
+          # Format cluster names
+          addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = c((tmp_crosswalkStartRow+1):(tmp_crosswalkStartRow+1+tmp_lengthCrosswalkSolution_1-1)), cols = tmp_crosswalkStartCol) # Row names
+          addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = tmp_crosswalkStartRow, cols = c((tmp_crosswalkStartCol+1):(tmp_crosswalkStartCol+1+tmp_lengthCrosswalkSolution_2-1))) # Column names
+
+          # Format proportions table
+          # For percent formatting, if 0, format as % with no decimals, else, format as % with 1 decimal
+          # For background, color in 5 shades from white to green
+          for(tmp_rowI in 1:tmp_lengthCrosswalkSolution_1)
+          {
+            # Give adjustment within spreadsheet to start at table top-left corner
+            tmp_rowI_propTable <- tmp_rowI + tmp_crosswalkStartRow
+
+            for(tmp_colJ in 1:tmp_lengthCrosswalkSolution_2)
+            {
+              # Give adjustment within spreadsheet to start at table top-left corner
+              tmp_colJ_propTable <- tmp_colJ + tmp_crosswalkStartCol
+
+              # print(paste0(tmp_rowI_propTable, ",", tmp_colJ_propTable))
+
+              # addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow-1), cols = (tmp_crosswalkStartCol))
+              # print(tmp_crosswalkTable[tmp_rowI,tmp_colJ])
+              # print(tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 0 | tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 1)
+
+              if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 0 | tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 1)
+              {
+                addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_pctZeroOne, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable)
+              } else
+              {
+                addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_pct, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable)
+              }
+
+              # Color tables with background spectrum white:green for [0,1] proportion
+              if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.2)
+              {
+                addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_1, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+              } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.4)
+              {
+                addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_2, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+              } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.6)
+              {
+                addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_3, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+              } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.8)
+              {
+                addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_4, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+              } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] <= 1)
+              {
+                addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_5, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+              } else
+              {
+                print(paste0("NOTE: Non-numeric value in 'Cluster Sizes' tab at row/col [", tmp_rowI_propTable, ",", tmp_colJ_propTable, "]"))
+              }
+              # tmp_style_greenShade_5
+            }
+          }
+
+          # Iterate row anchor for current solutions specified by [tmp_crosswalkSolution_1]
+          tmp_crosswalkStartCol <- tmp_crosswalkStartCol + length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_2]])) + 3
+
+        } # End loop across current [tmp_crosswalkSolution_2]
+
+        # Reset [tmp_crosswalkStartCol] to 2 (Column 'B')
+        tmp_crosswalkStartCol <- 2
+        # Iterate row anchor for current solutions specified by [tmp_crosswalkSolution_1]
+        tmp_crosswalkStartRow <- tmp_crosswalkStartRow + length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_1]])) + 4
+
+      } # End loop across current [tmp_crosswalkSolution_1]
+
+
+      # Add cluster stories -----------------------------------------------
+
+      # Iterate over each cluster solution and create story for each solution
+      for(tmp_clusterStorySolution in 1:length(tmp_clusterDescriptionsList))
+      {
+        # Set number of clusters in current solution
+        tmp_numClustersInSolution <- tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[1]][[1]][1,2] # Returns second entry in first proportion table for current solution [tmp_clusterStorySolution]
+
+        # Add worksheet
+        tmp_worksheetName <- paste0(tmp_numClustersInSolution, " Clusters (", clusterSolutions[tmp_clusterStorySolution],")")
+        addWorksheet(tmp_wb, tmp_worksheetName)
+
+        # Set first table column
+        tmp_currentCol <- 2
+
+
+        # Export the stories for each cluster within the current solution
+        for(tmp_clusterInSolution in 1:tmp_numClustersInSolution)
+        {
+          # Write cluster number
+          writeData(tmp_wb, tmp_worksheetName, paste0("Cluster ", tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[1]][1,1]), startCol = tmp_currentCol, startRow = tmp_titleRow)
+
+          # Write cluster name to title if different from 1:n cluster number
+          if(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[1]][1,5] != as.character(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[1]][1,1]))
+          {
+            # Cluster name
+            writeData(tmp_wb, tmp_worksheetName, paste0("(", tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[1]][1,5], ")"), startCol = tmp_currentCol + 1, startRow = tmp_titleRow)
+          }
+
+          # Add proportions table to worksheet
+          writeData(tmp_wb, tmp_worksheetName, tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[1]][1,3:4], startCol = tmp_currentCol, startRow = tmp_proportionRow)
+
+          # Add descriptions table to worksheet
+          writeData(tmp_wb, tmp_worksheetName, tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]][,1:4], startCol = tmp_currentCol, startRow = tmp_descriptionRow)
+
+
+          # Format table
+          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_header, cols = tmp_currentCol, rows = tmp_titleRow)
+          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_count, cols = tmp_currentCol, rows = tmp_proportionRow + 1, stack = F)
+          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_pct, cols = tmp_currentCol + 1, rows = tmp_proportionRow + 1, stack = F)
+          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_boldAndCenter, cols = c(tmp_currentCol:(tmp_currentCol+1)), rows = tmp_proportionRow, stack = F)
+          addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_boldAndCenter, cols = c(tmp_currentCol:(tmp_currentCol+3)), rows = tmp_descriptionRow, stack = F)
+
+          # Format numbers using [exportDecimalPlaces]
+          if(class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer")
+          {
+            tmp_style_userSpecifiedFloat <- createStyle(numFmt= paste0( "#,##0.0", paste0(rep("0", (exportDecimalPlaces-1)), collapse = "") ) )
+            addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_userSpecifiedFloat, cols = c((tmp_currentCol+1):(tmp_currentCol+3)), rows = c((tmp_descriptionRow+1):(tmp_descriptionRow+1+dim(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]])[1])-1), stack = F, gridExpand = T)
+          } else # [exportDecimalPlaces] cleaned above so must be a number or a data.frame
+          {
+            # print("NO DATA.FRAME FORMATTING CURRENTLY AVAILABLE")
+            addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_floatDescriptionTable, cols = c((tmp_currentCol+1):(tmp_currentCol+3)), rows = c((tmp_descriptionRow+1):(tmp_descriptionRow+1+dim(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]])[1])-1), gridExpand = T)
+          }
+
+          # Format standard diffs in descriptions table
+          conditionalFormatting(tmp_wb, tmp_worksheetName, cols = tmp_currentCol + 3, rows = c(8:(8+length(dataColumns)-1)), rule = " > Parameters!$C$2", type = "expression", style = tmp_style_posSig)
+          conditionalFormatting(tmp_wb, tmp_worksheetName, cols = tmp_currentCol + 3, rows = c(8:(8+length(dataColumns)-1)), rule = " < (-1)*Parameters!$C$2", type = "expression", style = tmp_style_negSig)
+
+          # IF not last cluster in solution, iterate table columns
+          tmp_currentCol <- tmp_currentCol + 6
+
+        } # End loop for proportions and description information for each cluster within current solution for [exportOutput]
+
+
+        # Add plots ---------------------------------------------------------------
+
+        # Set plotting rows and column increases depending on which plots are requested
+        if(includeRadarPlots | includeDistributionPlots)
+        {
+          # Set start rows for plots depending on if both sets of plots are present or not
+          if(includeRadarPlots)
+          {
+            tmp_radarPlotStartRow = tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
+            tmp_radarPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
+
+            # If there are also distribution plots requested, set those values based on the radar plot start row value
+            if(includeDistributionPlots & tmp_numClustersInSolution >= 3) # If there are 3 or more clusters, than radar plots are viable for this solution [s]
+            {
+              tmp_distrPlotStartRow = tmp_radarPlotStartRow + 25 # [tmp_radarPlotStartRow] plus 24 rows to skip radar plots (size of plot at 4 inches high)
+              tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
+            } else # Else there are too few data points for radar plots, so only a notice will be inserted in lieu of these plots
+            {
+              tmp_distrPlotStartRow = tmp_radarPlotStartRow + 4 # [tmp_radarPlotStartRow] plus 3 rows to skip the notice that there are no radar plots for solutions with fewer than 3 clusters
+              tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
+            }
+
+          } else
+          {
+            tmp_distrPlotStartRow = tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
+            tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
+          }
+
+
+          # Create means table for plots. Use this table to establish variable plot order as well
+          # Initialize variable means by cluster for current solution
+          tmp_currentSolutionMeansStorage <- as.data.frame(matrix(, length(dataColumns), 1))
+          names(tmp_currentSolutionMeansStorage)[1] <- "Variable"
+
+          # Set first col to variable names
+          tmp_currentSolutionMeansStorage[,1] <- sort(dataColumns)
+
+          # Get cluster names and means for each cluster in current solution
+          for(tmp_meansClusterInSolution in 1:tmp_numClustersInSolution)
+          {
+            # Get cluster mean from storage
+            tmp_meansData <- tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_meansClusterInSolution]][[2]][,c(1:2)]
+
+            # Write sorted data to i+1 to account for labels column
+            tmp_currentSolutionMeansStorage <- left_join(tmp_currentSolutionMeansStorage, tmp_meansData, by = "Variable")
+
+
+            # Set current original cluster name for checking and modifying
+            tmp_originalClusterName <- tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_meansClusterInSolution]][[1]][1,5]
+
+            # Set names of clusters
+            if( grepl("^[0-9]+$", tmp_originalClusterName) ) # If Original ID is a number, set name to 'k=#'
+            {
+              # Set cluster name
+              names(tmp_currentSolutionMeansStorage)[tmp_meansClusterInSolution + 1] <- paste0("k=", tmp_originalClusterName)
+            } else
+            {
+              names(tmp_currentSolutionMeansStorage)[tmp_meansClusterInSolution + 1] <- tmp_originalClusterName
+            }
+
+          } # END LOOP OVER CLUSTERS FOR MEANS/NAMES
+
+          # If [includeRadarPlots], make radar plots
+          if(includeRadarPlots)
+          {
+            # Radar charts must have 3 or more points. If only two clusters are present, skip charting for this solution
+            if(tmp_numClustersInSolution < 3)
+            {
+              writeData(tmp_wb, tmp_worksheetName, "NOTE: No radar charts are made for fewer than 3 clusters", startRow = tmp_radarPlotStartRow, startCol = 2)
+            } else
+            {
+              # Library for radar plots
+              require(fmsb)
+
+              for(tmp_currentRadarPlotVariableNumber in 1:dim(tmp_currentSolutionMeansStorage)[1])
+              {
+                tmp_plotDat <- tmp_currentSolutionMeansStorage[tmp_currentRadarPlotVariableNumber, -1]
+                tmp_maxDat <- as.data.frame( matrix(max(tmp_plotDat), 1, (dim(tmp_plotDat)[2])) )
+                tmp_minDat <- as.data.frame( matrix(min(tmp_plotDat), 1, (dim(tmp_plotDat)[2])) )
+
+                names(tmp_maxDat) <- names(tmp_plotDat)
+                names(tmp_minDat) <- names(tmp_plotDat)
+
+                tmp_plotDat <- rbind(
+                    tmp_maxDat
+                    , tmp_minDat
+                    , tmp_plotDat
+                  )
+
+
+                radarchartcirc(
+                  tmp_plotDat
+                  , cglty = 3
+                  , caxislabels = round(seq(from = tmp_plotDat[2,1], to = tmp_plotDat[1,1], length.out = 5),3)
+                  , title = tmp_currentSolutionMeansStorage[tmp_currentRadarPlotVariableNumber, 1]
+                  , axistype = 1
+                  , axislabcol = "#222222"
+                  , pcol = 'black'
+                  # , paxislabels
+                )
+
+
+                # Add plot
+                insertPlot(tmp_wb, tmp_worksheetName, width = 6, height = 4
+                  , startRow = tmp_radarPlotStartRow
+                  , startCol = (tmp_currentRadarPlotVariableNumber-1) * tmp_radarPlotColIncrease + 1
+                  , fileType = "png", units = "in", dpi = 300)
+
+              }
+
+            } # End loop for multivar radar plots
+          } # End [includeRadarPlots]
+
+
+          # If [includeDistributionPlots], plot distribution plots
+          if(includeDistributionPlots)
+          {
+            require(ggplot2)
+
+            # Iterate over each variable and create distribution plots
+            for(tmp_currentDistrPlotVariableNumber in 1:dim(tmp_currentSolutionMeansStorage)[1])
+            {
+              print(tmp_currentDistrPlotVariableNumber)
+
+              # Get data for current var [tmp_currentDistrPlotVariableNumber] across all clusters in current solution [tmp_plotClusterSolution]
+              tmp_varDensityData <- clusterData %>% select(all_of(clusterSolutions[tmp_clusterStorySolution]), all_of(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]))
+              names(tmp_varDensityData) <- c("tmp_plotClusterID", "tmp_plotVariable")
+
+              # Drop any NAs
+              tmp_varDensityData <- tmp_varDensityData[-which(is.na(tmp_varDensityData[,2])), ]
+
+              # Convert cluster IDs into a factor for ggplot
+              tmp_varDensityData[,"tmp_plotClusterID"] <- as.factor(tmp_varDensityData[,"tmp_plotClusterID"])
+
+              # Set means by cluster ID
+              tmp_clusterVarMeans <- tmp_varDensityData %>% group_by(tmp_plotClusterID) %>% summarize(clusterMean = mean(tmp_plotVariable, na.rm = T))
+              tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean,3)
+
+              # Create labels including means for plotting
+              tmp_clusterVarMeans$clusterName <- names(tmp_currentSolutionMeansStorage)[-1]
+              tmp_clusterVarMeans$meanPlotLabels <- paste0(tmp_clusterVarMeans$clusterName, " - mean: ", tmp_clusterVarMeans$clusterMean)
+
+              # Attach 'meanPlotLabels' to [tmp_varDensityData]
+              tmp_varDensityData <- left_join(tmp_varDensityData, tmp_clusterVarMeans[, c("tmp_plotClusterID", "meanPlotLabels")], by = "tmp_plotClusterID")
+              tmp_varDensityData$meanPlotLabels <- as.factor(tmp_varDensityData$meanPlotLabels)
+
+              # Change density plot line colors by groups
+              tmp_distrPlot <- ggplot(tmp_varDensityData, aes(x=tmp_varDensityData[,2], fill = tmp_varDensityData[,3], color=tmp_varDensityData[,3])) +
+              geom_density(alpha = 0.25) +
+              geom_vline(data=tmp_clusterVarMeans, aes(xintercept=clusterMean, color=meanPlotLabels), linetype="dashed") +
+              xlab(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]) +
+              ggtitle( paste0("Distribution of ["
+                , tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]
+                ,"] Values by Cluster") ) +
+              theme(legend.title = element_blank(), legend.position="bottom") +
+              guides(fill = guide_legend(nrow = 5))
+
+              print(tmp_distrPlot)
+
+              # Add variable plot to workbook
+              insertPlot(tmp_wb, tmp_worksheetName, width = 6, height = 4
+                , startRow = tmp_distrPlotStartRow
+                , startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1
+                , fileType = "png", units = "in", dpi = 300)
+
+
+            } # End plotting variable distributions
+
+          } # End [includeDistributionPlots]
+
+
+        } # END PLOTTING #
+
+      } # END ADD CLUSTER DESCRIPTIONS TO EXCEL #
 
     } # END EXPORT OF CLUSTER DESCRIPTIONS #
 
   } # END CREATING LIST OF CLUSTER DESCRIPTIONS #
 
-} ## END FUNCTION [createClusterDescriptions] ##
+
+  # EXPORT IF REQUESTED
+  if(exportOutput)
+  {
+    print("export")
+  }
+
+  # Concatenate and return cluster info
+  tmp_clusterInfoOutput <- c(metrics?, tmp_clusterDescriptionsList)
+  return(tmp_clusterInfoOutput)
+
+
+
+# } ## END FUNCTION [createClusterDescriptions] ##
 
 
