@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-03-18
+# Updated: 2024-03-19
 # -------------------------------------------------------------------------
 
 
@@ -36,7 +36,8 @@
 # Add nice names for metric printing
 # CHECK CLUSTER METRICS, CAN PLOT THEM ALL? NO, NO I CAN'T
 # Force solutions to end up as 1:n if any clusters are missing in between
-# What to do if any NAs in [clusterSolutions]
+# Switch radar and distr plots
+# Description headings not bold
 
 # Check for FIX comments!!
 # Check for TODO comments!!
@@ -240,7 +241,7 @@ fitClusterMetrics <- function(fit_clusterData, fit_clusterSolutionsToFitMetricsO
       # if(tmp_clustStats[ tmp_metric ])
       if(is.null(unlist(tmp_clustStats[ tmp_metric ])))
       {
-        tmp_clustStats[ tmp_metric ] = "NA"
+        tmp_clustStats[ tmp_metric ] = "#N/A" # Must be "#N/A" to export properly to Excel
       }
     }
 
@@ -405,7 +406,7 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
 # -------------------------------------------------------------------------
 
 
-# describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, runQuietly = FALSE, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "", includeClusterDescriptions = TRUE, includeRadarPlots = TRUE, includeDistributionPlots = TRUE)
+# describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, runQuietly = FALSE, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "", includeClusterDescriptions = TRUE, includeRadarPlots = TRUE, includeDistributionPlots = TRUE, plotQuietly = TRUE)
 # dataFormattingMatrix = "")
 # {
   ## LIBRARY REQUIREMENTS ##
@@ -694,10 +695,6 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
       # Remove distances for fit metrics (often a very large object)
       rm(clusterDistances)
 
-
-# HERE --------------------------------------------------------------------
-
-
       # If exporting, add fit metrics data to Excel file from within the [includeClusterFitMetrics] check
       if(exportOutput)
       {
@@ -748,15 +745,23 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
         # Iterate over fit metrics
         for(tmp_metricToPlot in 3:dim(tmp_clusterFitMetrics)[2])
         {
-          plot(c(1:dim(tmp_clusterFitMetrics)[1]), tmp_clusterFitMetrics[,tmp_metricToPlot], type = 'l', main = names(tmp_clusterFitMetrics)[tmp_metricToPlot], xlab = "Cluster Number", xaxt = "n", ylab = "Metric Value")
-          axis(side = 1, at = c(1:dim(tmp_clusterFitMetrics)[1]), labels = tmp_clusterFitMetrics[,1])
-          grid()
 
-          # Add plot
-          insertPlot(tmp_wb, "Cluster Metrics", width = 6, height = 4,
-          startRow = tmp_plotStartRow + tmp_plotRowIncrease * tmp_numPlots, startCol = 2, fileType = "png", units = "in", dpi = 300)
+          # If any of the fit metrics returned NA, do not plot that metric
+          if(any(tmp_clusterFitMetrics[,tmp_metricToPlot] == "#N/A"))
+          {
+            writeData(tmp_wb, "Cluster Metrics", paste0("ERROR: NAs in fit metric [", names(tmp_clusterFitMetrics)[tmp_metricToPlot] ,"]" ), startRow = tmp_plotStartRow + tmp_plotRowIncrease * tmp_numPlots, startCol = 2)
+          } else
+          {
+            plot(c(1:dim(tmp_clusterFitMetrics)[1]), tmp_clusterFitMetrics[,tmp_metricToPlot], type = 'l', main = names(tmp_clusterFitMetrics)[tmp_metricToPlot], xlab = "Cluster", xaxt = "n", ylab = "Metric Value")
+            axis(side = 1, at = c(1:dim(tmp_clusterFitMetrics)[1]), labels = tmp_clusterFitMetrics[,1])
+            grid()
 
-          # Iterate plot count
+            # Add plot
+            insertPlot(tmp_wb, "Cluster Metrics", width = 6, height = 4,
+            startRow = tmp_plotStartRow + tmp_plotRowIncrease * tmp_numPlots, startCol = 2, fileType = "png", units = "in", dpi = 300)
+          }
+
+          # Iterate plot count for row calculation
           tmp_numPlots = tmp_numPlots + 1
         }
 
@@ -767,16 +772,17 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
   } # END FIT METRICS #
 
 
+
   # Begin descriptions ----------------------------------------------------
-  # if(includeClusterDescriptions)
-  # {
+  if(includeClusterDescriptions)
+  {
 
     # Call function to create cluster descriptions
     tmp_clusterDescriptionsList <- createClusterDescriptions(clusterData, clusterSolutions, dataColumns)
 
     # If exporting output, add cluster descriptions to excel file from within the [includeClusterDescriptions] call
-    # if(exportOutput)
-    # {
+    if(exportOutput)
+    {
 
       ## ADD CLUSTER SIZES TAB ##
 
@@ -864,8 +870,6 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
 
         for(tmp_crosswalkSolution_2 in (tmp_crosswalkSolution_1+1):length(clusterSolutions))
         {
-
-          print(tmp_crosswalkSolution_1, tmp_crosswalkSolution_2)
           # Set number of clusters in solution #2
           tmp_lengthCrosswalkSolution_2 <- length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_2]]))
 
@@ -1135,6 +1139,10 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
                   , startCol = (tmp_currentRadarPlotVariableNumber-1) * tmp_radarPlotColIncrease + 1
                   , fileType = "png", units = "in", dpi = 300)
 
+                if(plotQuietly)
+                {
+                  dev.off()
+                }
               }
 
             } # End loop for multivar radar plots
@@ -1149,21 +1157,50 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
             # Iterate over each variable and create distribution plots
             for(tmp_currentDistrPlotVariableNumber in 1:dim(tmp_currentSolutionMeansStorage)[1])
             {
-              print(tmp_currentDistrPlotVariableNumber)
 
               # Get data for current var [tmp_currentDistrPlotVariableNumber] across all clusters in current solution [tmp_plotClusterSolution]
               tmp_varDensityData <- clusterData %>% select(all_of(clusterSolutions[tmp_clusterStorySolution]), all_of(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1]))
               names(tmp_varDensityData) <- c("tmp_plotClusterID", "tmp_plotVariable")
 
               # Drop any NAs
-              tmp_varDensityData <- tmp_varDensityData[-which(is.na(tmp_varDensityData[,2])), ]
+              tmp_varDensityData <- tmp_varDensityData %>% filter(!is.na(tmp_plotVariable))
 
               # Convert cluster IDs into a factor for ggplot
               tmp_varDensityData[,"tmp_plotClusterID"] <- as.factor(tmp_varDensityData[,"tmp_plotClusterID"])
 
               # Set means by cluster ID
               tmp_clusterVarMeans <- tmp_varDensityData %>% group_by(tmp_plotClusterID) %>% summarize(clusterMean = mean(tmp_plotVariable, na.rm = T))
-              tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean,3)
+
+              # Confirm means match original means data (within 1% absolute error)
+              if( any((abs(tmp_clusterVarMeans$clusterMean - tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1]) / tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1]) > 0.01) )
+              {
+                # If there is a mismatch print which cluster and variable are askew
+                print(paste0("WARNING: Means mismatch on distibution plot for variable [", tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1], "]. Plot may not be accurate."))
+
+                # Print cluster and percent error
+                for(tmp_k in 2:dim(tmp_currentSolutionMeansStorage)[2])
+                {
+                  if( (abs(tmp_clusterVarMeans[tmp_k - 1, 'clusterMean'] - tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber, tmp_k]) / tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber, tmp_k]) > 0.1)
+                  {
+                    print(paste0("Mismatch in cluster ["
+                      , names(tmp_currentSolutionMeansStorage)[tmp_k]
+                      , "], (", (abs(tmp_clusterVarMeans[tmp_k - 1, 'clusterMean'] - tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber, tmp_k]) / tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber, tmp_k])
+                      , "% absolute error)")
+                    )
+                  }
+                }
+
+              }
+
+
+              if(length(exportDecimalPlaces) == 1)
+              {
+                tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean, exportDecimalPlaces) # TODO - update with [exportDecimalPlaces] matrix
+              } else
+              {
+                tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean, 3) # TODO - update with [exportDecimalPlaces] matrix
+              }
+
 
               # Create labels including means for plotting
               tmp_clusterVarMeans$clusterName <- names(tmp_currentSolutionMeansStorage)[-1]
@@ -1192,6 +1229,10 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
                 , startCol = (tmp_currentDistrPlotVariableNumber-1) * tmp_distrPlotColIncrease + 1
                 , fileType = "png", units = "in", dpi = 300)
 
+              if(plotQuietly)
+              {
+                dev.off()
+              }
 
             } # End plotting variable distributions
 
@@ -1210,11 +1251,16 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
   # EXPORT IF REQUESTED
   if(exportOutput)
   {
-    print("export")
+    # Set timestamp for file name
+    tmp_timestamp <- gsub(":", "-", Sys.time())
+    tmp_timestamp <- gsub(" ", "_", tmp_timestamp)
+    tmp_timestamp <- gsub("\\.[0-9]+", "", tmp_timestamp)
+    # Export excel file
+    saveWorkbook(tmp_wb, paste0("Cluster Descriptions ", tmp_timestamp, ".xlsx"), TRUE)
   }
 
   # Concatenate and return cluster info
-  tmp_clusterInfoOutput <- c(metrics?, tmp_clusterDescriptionsList)
+  tmp_clusterInfoOutput <- list(tmp_clusterFitMetrics, tmp_clusterDescriptionsList)
   return(tmp_clusterInfoOutput)
 
 
