@@ -1328,26 +1328,11 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
     saveWorkbook(tmp_wb, paste0("Cluster Descriptions ", tmp_timestamp, ".xlsx"), TRUE)
   }
 
-
-# HERE --------------------------------------------------------------------
-
-
   # Concatenate and return cluster info
   tmp_clusterInfoOutput <- c('tmp_clusterFitMetrics', 'tmp_clusterDescriptionsList')
-  mget(tmp_clusterInfoOutput[sapply(tmp_clusterInfoOutput, exists)])
+  tmp_clusterInfoOutput <- mget(tmp_clusterInfoOutput[sapply(tmp_clusterInfoOutput, exists)])
 
-  if(includeClusterFitMetrics | includeClusterDescriptions)
-  {
-
-    if(includeClusterFitMetrics)
-    {
-      tmp_clusterInfoOutput <- list(tmp_clusterInfoOutput, tmp_clusterFitMetrics)
-    }
-
-    tmp_clusterInfoOutput <- list(tmp_clusterFitMetrics, tmp_clusterDescriptionsList)
-
-    return(tmp_clusterInfoOutput)
-  }
+  return(tmp_clusterInfoOutput)
 
 
 # } ## END FUNCTION [createClusterDescriptions] ##
