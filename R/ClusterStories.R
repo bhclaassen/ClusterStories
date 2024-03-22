@@ -25,9 +25,9 @@
 # Create structure overview
 # Check means output
 
-# Check for FIX comments!!
+# Add single-obs description
+
 # Check for TODO comments!!
-# Check for DELETE comments!!
 
 # Change pooled variance to
 #   - Hedges for <=20
