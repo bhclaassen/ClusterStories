@@ -20,18 +20,10 @@
 
 # TODO --------------------------------------------------------------------
 
-# Add check for total sample size >2
-# Make sure distr plots works with single observation (mean only)
-# Add functionality without variance so a set of singletons can be compared
-
 # Add variable precision and units secondary table
 # Add one-pager describing how to use product
 # Create structure overview
-# Test input values
-# Try with clusters of single values for div 0 errors
-# Add nice names for metric printing
-# Switch radar and distr plots
-# Description headings not bold
+# Check means output
 
 # Check for FIX comments!!
 # Check for TODO comments!!
@@ -106,10 +98,10 @@ ifValidColorsCheck <- function(trialColorList)
 fitClusterMetrics <- function(fit_clusterData, fit_clusterSolutionsToFitMetricsOn, fit_clusterDistances, fit_clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"))
 {
   # Takes in the following parameters:
-  #   - fit_clusterData <- clusterData
-  #   - fit_clusterSolutionsToFitMetricsOn <- clusterSolutionsToFitMetricsOn
-  #   - fit_clusterDistances <- clusterDistances
-  #   - fit_clusterFitMetrics <- clusterFitMetrics
+    # - fit_clusterData <- clusterData
+    # - fit_clusterSolutionsToFitMetricsOn <- clusterSolutionsToFitMetricsOn
+    # - fit_clusterDistances <- clusterDistances
+    # - fit_clusterFitMetrics <- clusterFitMetrics
 
   require(tidyverse)
   require(fpc) # For 'cluster.stats' command
@@ -480,6 +472,17 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
     stop("[clusterSolutions] cannot have any NA values")
   }
 
+  # There cannot be any cluster solutions with only one cluster ID (breaks fitting metrics and calculating significance via pooled variance)
+  if(
+    # any( sapply (clusterData[clusterSolutions], FUN = function(x) {var(x, na.rm = T)} ) == 0 ) # If any cluster IDs
+    any( sapply (clusterData[clusterSolutions], FUN = function(x) {length(unique(x))} ) == 1 ) # If any cluster IDs
+  )
+  {
+    stop("All [clusterSolutions] must have more than one cluster ID each")
+  }
+
+
+
   # Confirm [dataColumns] are column numbers or column names in [clusterData]
   if( all(sapply(dataColumns, class) == "numeric") | all(sapply(dataColumns, class) == "integer") ) # Check if all [dataColumns] are integers and therefore are assumed to be column numbers
   {
@@ -711,10 +714,9 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
       }
     }
 
-    # If the two conditions above are fulfilled, fit metrics and allow for export
+    # If the conditions above are fulfilled, fit metrics and allow for export
     if(includeClusterFitMetrics)
     {
-
       # Call function [fitClusterMetrics] and store results
       tmp_clusterFitMetrics <- fitClusterMetrics(clusterData, clusterSolutionsToFitMetricsOn, clusterDistances, clusterFitMetrics)
 
@@ -770,6 +772,32 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
         tmp_plotRowIncrease = 22 # Number of rows to match 4 inches of plot height plus a margin
         tmp_numPlots = 0 # Initialize plot count to 0
 
+        # Set metric plot labels
+        tmp_allMetricPlotLabels <- data.frame(
+          stringsAsFactors = FALSE,
+          metricName = c("n","cluster.number","min.cluster.size","noisen"
+            ,"average.between","average.within","n.between","n.within"
+            ,"max.diameter","min.separation","within.cluster.ss","avg.silwidth"
+            ,"g2","g3","pearsongamma","dunn","dunn2","entropy","wb.ratio","ch"
+            ,"widestgap","sindex","corrected.rand","vi"),
+          plottingName = c("Number of Cases (n)","Number of Clusters (cluster.number)"
+            ,"Smallest Cluster Size (min.cluster.size)","Number of Noise Points (noisen)"
+            ,"Average Distance Between Clusters (average.between)"
+            ,"Average Distance Within Clusters (average.within)"
+            ,"Number of Distances Between Clusters (n.between)"
+            ,"Number of Distances Within Clusters (n.within)"
+            ,"Max Cluster Diameter (max.diameter)"
+            ,"Minimum Cluster Separation (min.separation)"
+            ,"Within Cluster Sum of Squares (within.cluster.ss)"
+            ,"Average Silhouette Width (avg.silwidth)"
+            ,"Goodman and Kruskal's Gamma Coefficient (g2)","G3 Coefficient (g3)"
+            ,"Pearson's Gamma (pearsongamma)","Dunn Index (dunn)","Dunn Index - 2 (dunn2)"
+            ,"Entropy (entropy)","Within/Between Ratio (wb.ratio)"
+            ,"Calinski-Harabasz index (ch)","Widest Within-Cluster Gap (widestgap)"
+            ,"Separation Index (sindex)","Corrected Rand Index (corrected.rand)"
+            ,"Variation of Information Index (vi)")
+          )
+
         # Iterate over fit metrics
         for(tmp_metricToPlot in 3:dim(tmp_clusterFitMetrics)[2])
         {
@@ -780,9 +808,12 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
             writeData(tmp_wb, "Cluster Metrics", paste0("ERROR: NAs in fit metric [", names(tmp_clusterFitMetrics)[tmp_metricToPlot] ,"]" ), startRow = tmp_plotStartRow + tmp_plotRowIncrease * tmp_numPlots, startCol = 2)
           } else
           {
+
+            tmp_metricPlotLabel <- tmp_allMetricPlotLabels[which(tmp_allMetricPlotLabels[,1] == names(tmp_clusterFitMetrics)[tmp_metricToPlot]), 2]
+
             if(dim(tmp_clusterFitMetrics)[1] > 1)
             {
-              plot(c(1:dim(tmp_clusterFitMetrics)[1]), tmp_clusterFitMetrics[,tmp_metricToPlot], type = 'l', main = names(tmp_clusterFitMetrics)[tmp_metricToPlot], xlab = "Cluster", xaxt = "n", ylab = "Metric Value")
+              plot(c(1:dim(tmp_clusterFitMetrics)[1]), tmp_clusterFitMetrics[,tmp_metricToPlot], type = 'l', main = tmp_metricPlotLabel, xlab = "Cluster", xaxt = "n", ylab = "Metric Value")
               axis(side = 1, at = c(1:dim(tmp_clusterFitMetrics)[1]), labels = tmp_clusterFitMetrics[,1])
               grid()
 
