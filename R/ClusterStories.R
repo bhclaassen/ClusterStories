@@ -23,7 +23,6 @@
 # Add variable precision and units secondary table
 # Add one-pager describing how to use product
 # Create structure overview
-# Check means output
 
 # Add single-obs description
 
@@ -364,8 +363,8 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
 
 # -------------------------------------------------------------------------
 
-# describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "", includeClusterDescriptions = TRUE, includeDistributionPlots = TRUE, includeRadarPlots = FALSE, plotQuietly = TRUE)
-# {
+describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "", includeClusterDescriptions = TRUE, includeDistributionPlots = TRUE, includeRadarPlots = FALSE, plotQuietly = TRUE)
+{
   ## LIBRARY REQUIREMENTS ##
   # - {tidyverse} for general use
   # - {fpc} for clustering fit metrics
@@ -1360,12 +1359,38 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
   }
 
   # Concatenate and return cluster info
-  tmp_clusterInfoOutput <- c('tmp_clusterFitMetrics', 'tmp_clusterDescriptionsList')
-  tmp_clusterInfoOutput <- mget(tmp_clusterInfoOutput[sapply(tmp_clusterInfoOutput, exists)])
+  tmp_clusterInfoOutputObjects <- c('tmp_clusterFitMetrics', 'tmp_clusterDescriptionsList')
+
+  tmp_clusterInfoObjectsCheck <- sapply(tmp_clusterInfoOutputObjects, exists)
+
+  if(tmp_clusterInfoObjectsCheck[1])
+  {
+    tmp_clusterFitMetrics <- list("fitMetrics", tmp_clusterFitMetrics)
+  }
+
+  if(tmp_clusterInfoObjectsCheck[2])
+  {
+    tmp_clusterDescriptionsList <- list("descriptions", tmp_clusterDescriptionsList)
+  }
+
+  tmp_clusterInfoOutput <- mget(tmp_clusterInfoOutputObjects[sapply(tmp_clusterInfoOutputObjects, exists)])
+
+
+
+  print(tmp_clusterInfoOutput)
 
   return(tmp_clusterInfoOutput)
 
 
-# } ## END FUNCTION [createClusterDescriptions] ##
+} ## END FUNCTION [createClusterDescriptions] ##
 
 
+# -------------------------------------------------------------------------
+tmpClusterDescription <- tmp_clusterInfoOutput
+# save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
+load(file = "tmpClusterDescriptionObject.Rda")
+
+describeObservation <- function(observationID, clusterID, clusterDescriptions)
+{
+
+} ## END FUNCTION [describeObservation] ##
