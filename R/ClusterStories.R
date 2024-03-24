@@ -771,7 +771,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         tmp_plotRowIncrease = 22 # Number of rows to match 4 inches of plot height plus a margin
         tmp_numPlots = 0 # Initialize plot count to 0
 
-        # Set metric plot labels
+        # Create metric plot labels
         tmp_allMetricPlotLabels <- data.frame(
           stringsAsFactors = FALSE,
           metricName = c("n","cluster.number","min.cluster.size","noisen"
@@ -797,7 +797,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
             ,"Variation of Information Index (vi)")
           )
 
-        # Iterate over fit metrics
+        # Iterate over fit metrics and plot
         for(tmp_metricToPlot in 3:dim(tmp_clusterFitMetrics)[2])
         {
 
@@ -831,6 +831,10 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
               startRow = tmp_plotStartRow + tmp_plotRowIncrease * tmp_numPlots, startCol = 2, fileType = "png", units = "in", dpi = 300)
             }
 
+            if(plotQuietly)
+            {
+              dev.off()
+            }
           }
 
           # Iterate plot count for row calculation
@@ -1026,7 +1030,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
                 {
                   print(paste0("NOTE: Non-numeric value in 'Cluster Sizes' tab at row/col [", tmp_rowI_propTable, ",", tmp_colJ_propTable, "]"))
                 }
-                # tmp_style_greenShade_5
               }
             }
 
@@ -1041,11 +1044,11 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           tmp_crosswalkStartRow <- tmp_crosswalkStartRow + length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_1]])) + 4
 
         } # End loop across current [tmp_crosswalkSolution_1]
-      }
+      } # ALL CROSSWALK TABLES ADDED #
 
       # Add cluster stories -----------------------------------------------
 
-      # Iterate over each cluster solution and create story for each solution
+      # Iterate over each cluster solution and create story for each solution in Excel
       for(tmp_clusterStorySolution in 1:length(tmp_clusterDescriptionsList))
       {
         # Set number of clusters in current solution
@@ -1332,7 +1335,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
                 {
                   dev.off()
                 }
-              }
+              } # End loop for each variable to plot
 
             } # End loop for multivar radar plots
           } # End [includeRadarPlots]
@@ -1358,41 +1361,59 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     saveWorkbook(tmp_wb, paste0("Cluster Descriptions ", tmp_timestamp, ".xlsx"), TRUE)
   }
 
-  # print(tmp_clusterFitMetrics)
-  # print(tmp_clusterDescriptionsList)
-
   # Concatenate and return cluster info
-  tmp_clusterInfoOutputObjects <- c('tmp_clusterFitMetrics', 'tmp_clusterDescriptionsList')
+  # tmp_clusterInfoOutputObjects <- c('tmp_clusterFitMetrics', 'tmp_clusterDescriptionsList')
+  # print(tmp_clusterInfoOutputObjects)
+  #
+  # tmp_clusterInfoObjectsCheck <- sapply(tmp_clusterInfoOutputObjects, exists)
+  # print(tmp_clusterInfoObjectsCheck)
 
-  tmp_clusterInfoObjectsCheck <- sapply(tmp_clusterInfoOutputObjects, exists)
-
-  if(tmp_clusterInfoObjectsCheck[1])
+  if(includeClusterFitMetrics) # If metrics were calculated...
   {
-    tmp_clusterFitMetrics <- list("fitMetrics", tmp_clusterFitMetrics)
-  }
+    if(includeClusterDescriptions) # If descriptions were also calculated, return both
+    {
+      tmp_clusterInfoOutput <- list(
+        "Fit Metrics"
+        , tmp_clusterFitMetrics
+        , "Descriptions"
+        , tmp_clusterDescriptionsList
+      )
 
-  if(tmp_clusterInfoObjectsCheck[2])
+      return(tmp_clusterInfoOutput)
+
+    } else # Else return only fit metrics
+    {
+      tmp_clusterInfoOutput <- list(
+        "Fit Metrics"
+        , tmp_clusterFitMetrics
+      )
+
+      return(tmp_clusterInfoOutput)
+    }
+  } else if(includeClusterDescriptions) # If only descriptions were calculated, return descriptions
   {
-    tmp_clusterDescriptionsList <- list("descriptions", tmp_clusterDescriptionsList)
+    tmp_clusterInfoOutput <- list(
+      "Descriptions"
+      , tmp_clusterDescriptionsList
+    )
+
+    return(tmp_clusterInfoOutput)
+  } else # Else return blank list
+  {
+    tmp_clusterInfoOutput <- list("")
+
+    return(tmp_clusterInfoOutput)
   }
-
-  tmp_clusterInfoOutput <- mget(tmp_clusterInfoOutputObjects[sapply(tmp_clusterInfoOutputObjects, exists)])
-
-
-  print(tmp_clusterInfoOutput)
-
-  return(tmp_clusterInfoOutput)
-
 
 } ## END FUNCTION [createClusterDescriptions] ##
 
-
-# -------------------------------------------------------------------------
-tmpClusterDescription <- tmp_clusterInfoOutput
-# save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
-load(file = "tmpClusterDescriptionObject.Rda")
-
-describeObservation <- function(observationID, clusterID, clusterDescriptions)
-{
-
-} ## END FUNCTION [describeObservation] ##
+#
+# # -------------------------------------------------------------------------
+# tmpClusterDescription <- tmp_clusterInfoOutput
+# # save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
+# load(file = "tmpClusterDescriptionObject.Rda")
+#
+# describeObservation <- function(observationID, clusterID, clusterDescriptions)
+# {
+#
+# } ## END FUNCTION [describeObservation] ##
