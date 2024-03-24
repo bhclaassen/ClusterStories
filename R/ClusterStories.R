@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-03-22
+# Updated: 2024-03-24
 # -------------------------------------------------------------------------
 
 
@@ -1358,6 +1358,9 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     saveWorkbook(tmp_wb, paste0("Cluster Descriptions ", tmp_timestamp, ".xlsx"), TRUE)
   }
 
+  # print(tmp_clusterFitMetrics)
+  # print(tmp_clusterDescriptionsList)
+
   # Concatenate and return cluster info
   tmp_clusterInfoOutputObjects <- c('tmp_clusterFitMetrics', 'tmp_clusterDescriptionsList')
 
@@ -1374,7 +1377,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   }
 
   tmp_clusterInfoOutput <- mget(tmp_clusterInfoOutputObjects[sapply(tmp_clusterInfoOutputObjects, exists)])
-
 
 
   print(tmp_clusterInfoOutput)
