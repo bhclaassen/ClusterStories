@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-03-24
+# Updated: 2024-04-12
 # -------------------------------------------------------------------------
 
 
@@ -363,7 +363,7 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
 
 # -------------------------------------------------------------------------
 
-describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "", includeClusterDescriptions = TRUE, includeDistributionPlots = TRUE, includeRadarPlots = FALSE, plotQuietly = TRUE)
+describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumns, exportOutput = TRUE, exportDecimalPlaces = 3, exportPositiveNegativeSignificanceColors = c("#33F5B7", "#FCB099"), includeClusterFitMetrics = FALSE, clusterDistances = "", clusterFitMetrics = c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"), clusterSolutionsToFitMetricsOn = "", includeClusterDescriptions = TRUE, includeDistributionPlots = TRUE, includeRadarPlots = FALSE, plotQuietly = FALSE)
 {
   ## LIBRARY REQUIREMENTS ##
   # - {tidyverse} for general use
@@ -792,7 +792,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
             ,"Goodman and Kruskal's Gamma Coefficient (g2)","G3 Coefficient (g3)"
             ,"Pearson's Gamma (pearsongamma)","Dunn Index (dunn)","Dunn Index - 2 (dunn2)"
             ,"Entropy (entropy)","Within/Between Ratio (wb.ratio)"
-            ,"Calinski-Harabasz index (ch)","Widest Within-Cluster Gap (widestgap)"
+            ,"Calinski-Harabasz Index (ch)","Widest Within-Cluster Gap (widestgap)"
             ,"Separation Index (sindex)","Corrected Rand Index (corrected.rand)"
             ,"Variation of Information Index (vi)")
           )
@@ -1353,6 +1353,9 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   # EXPORT IF REQUESTED
   if(exportOutput)
   {
+    print("Exporting Excel file to current working directory:")
+    print(getwd())
+
     # Set timestamp for file name
     tmp_timestamp <- gsub(":", "-", Sys.time())
     tmp_timestamp <- gsub(" ", "_", tmp_timestamp)
