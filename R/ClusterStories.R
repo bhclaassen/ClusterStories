@@ -14,19 +14,15 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-04-12
+# Updated: 2024-04-17
 # -------------------------------------------------------------------------
 
 
 # TODO --------------------------------------------------------------------
-
-# Add variable precision and units secondary table
 # Add one-pager describing how to use product
 # Create structure overview
 
 # Add single-obs description
-
-# Check for TODO comments!!
 
 # Change pooled variance to
 #   - Hedges for <=20
@@ -566,13 +562,13 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 # -------------------------------------------------------------------------
 
 
-  # If [exportOutput] if TRUE, then begin export process with cleaned data
+  # If [exportOutput] is TRUE, then begin export process with cleaned data
   if(exportOutput)
   {
     require(openxlsx)
 
     # [exportDecimalPlaces] must be a single number, or a data.frame
-    if( (length(exportDecimalPlaces) == 1 & (class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer") ) )
+    if( ( length(exportDecimalPlaces) == 1 & ( class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer" ) ) )
     {
       # [exportDecimalPlaces] must be a whole number
       exportDecimalPlaces <- round(exportDecimalPlaces)
@@ -581,6 +577,12 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       if(exportDecimalPlaces < 0)
       {
         print("NOTE: [exportDecimalPlaces] must be non-negative. It has been converted to the default value of 3")
+        exportDecimalPlaces <- 3 # If not, reset to default of 3
+      }
+
+      if(any(exportDecimalPlaces$DataDecimals > 20))
+      {
+        print("NOTE: [exportDecimalPlaces] must be less than 20. It has been converted to the default value of 3")
         exportDecimalPlaces <- 3 # If not, reset to default of 3
       }
 
@@ -598,8 +600,26 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         stop("[exportDecimalPlaces] data.frame must have the first row be named 'Metrics' and the second row be named 'Descriptions'")
       }
 
+
+      if(any(exportDecimalPlaces$DataDecimals < 0))
+      {
+        print("NOTE: [exportDecimalPlaces] 'DataDecimal' values must all be non-negative. Negative values have been converted to the default value of 3")
+        exportDecimalPlaces[which(exportDecimalPlaces$DataDecimals < 2), "DataDecimals"] <- 3 # If not, reset to default of 3
+      }
+
+      if(any(exportDecimalPlaces$DataDecimals > 20))
+      {
+        print("NOTE: [exportDecimalPlaces] 'DataDecimal' values must all be less than 20. Values over this have been converted to the default value of 3")
+        exportDecimalPlaces[which(exportDecimalPlaces$DataDecimals > 20), "DataDecimals"] <- 3 # If not, reset to default of 3
+      }
+
       # Round [exportDecimalPlaces] decimals to be whole numbers if not given as such
       exportDecimalPlaces[,3] = round(exportDecimalPlaces[,3], 0)
+
+      if(!all(exportDecimalPlaces$DataType %in% c("", "%", "$")))
+      {
+        stop("All values for [exportDecimalPlaces] 'DataType' must be one of the following: '%', '$', or blank ('')")
+      }
 
     } else
     {
@@ -655,11 +675,11 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
     if(class(exportDecimalPlaces) == 'data.frame')
     {
-      tmp_style_floatMetricsTable <- createStyle(numFmt= paste0( "#,##0.0", paste0(rep("0", (exportDecimalPlaces[1,3]-1)), collapse = "") ) )
-      tmp_style_floatDescriptionTable <- createStyle(numFmt= paste0( "#,##0.0", paste0(rep("0", (exportDecimalPlaces[2,3]-1)), collapse = "") ) )
+      tmp_style_floatMetricsTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[1,3])), collapse = "") ) )
+      tmp_style_floatDescriptionTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[2,3])), collapse = "") ) )
     } else
     {
-      tmp_style_floatMetricsTable <- createStyle(numFmt= paste0( "#,##0.0", paste0(rep("0", (exportDecimalPlaces-1)), collapse = "") ) )
+      tmp_style_floatMetricsTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces)), collapse = "") ) )
       tmp_style_floatDescriptionTable <- tmp_style_floatMetricsTable
     }
 
@@ -1092,12 +1112,44 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           # Format numbers using [exportDecimalPlaces]
           if(class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer")
           {
-            tmp_style_userSpecifiedFloat <- createStyle(numFmt= paste0( "#,##0.0", paste0(rep("0", (exportDecimalPlaces-1)), collapse = "") ) )
+            tmp_style_userSpecifiedFloat <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces)), collapse = "") ) )
             addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_userSpecifiedFloat, cols = c((tmp_currentCol+1):(tmp_currentCol+3)), rows = c((tmp_descriptionRow+1):(tmp_descriptionRow+1+dim(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]])[1]-1)), stack = F, gridExpand = T)
           } else # [exportDecimalPlaces] cleaned above so must be a number or a data.frame
           {
-            # print("NO DATA.FRAME FORMATTING CURRENTLY AVAILABLE")
-            addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_floatDescriptionTable, cols = c((tmp_currentCol+1):(tmp_currentCol+3)), rows = c((tmp_descriptionRow+1):(tmp_descriptionRow+1+dim(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]])[1]-1)), gridExpand = T)
+            # Set current description table for multiple calls
+            tmp_descriptionTable <- tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]][,1:4]
+            for(tmpVarNum in 1:dim(tmp_descriptionTable)[1])
+            {
+              # Pull current var row from [exportDecimalPlaces]
+              tmp_currentVarFormatting <- exportDecimalPlaces[which(exportDecimalPlaces[,1] == tmp_descriptionTable[tmpVarNum,1]),]
+
+              if(tmp_currentVarFormatting$DataType == "%")
+              {
+                # Set custom style for percents
+                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( "0.", paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = ""),  "%") )
+
+              } else if(tmp_currentVarFormatting$DataType == "$")
+              {
+                # Set custom style for dollars
+                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( "$#,##0.", paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = "") ) )
+
+              } else if(tmp_currentVarFormatting$DataType == "")
+              {
+                # Set custom style for counts
+                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = "") ) )
+
+              } else
+              {
+                stop(paste0("Unrecognized character in [exportDecimalPlaces] 'DataType' column for variable '", tmp_currentVarFormatting$Variables, "'"))
+              }
+
+              # Apply custom formatting to first two columns. These are the only two expressed in the original units
+              addStyle(tmp_wb, tmp_worksheetName, style=tmp_exportDecimalPlaces_floatDescriptionTable, cols = c((tmp_currentCol+1):(tmp_currentCol+2)), rows = (tmp_descriptionRow+tmpVarNum), gridExpand = T)
+            }
+
+            # Format the standard differences from 'Descriptions' in [exportDecimalPlaces]
+            addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_floatDescriptionTable, cols = (tmp_currentCol+3), rows = c((tmp_descriptionRow+1):(tmp_descriptionRow+1+dim(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]])[1]-1)), stack = F, gridExpand = T)
+
           }
 
           # Format standard diffs in descriptions table
@@ -1141,18 +1193,18 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           # Set start rows for plots depending on if both sets of plots are present or not
           if(includeDistributionPlots)
           {
-            tmp_distrPlotStartRow = tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
-            tmp_distrPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
+            tmp_distrPlotStartRow <- tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
+            tmp_distrPlotColIncrease <- 7 # Number of cols to match 6 inches of plot width plus a margin
 
             if(includeRadarPlots)
             {
-              tmp_radarPlotStartRow = tmp_distrPlotStartRow + 25 # [tmp_radarPlotStartRow] plus 24 rows to skip radar plots (size of plot at 4 inches high)
-              tmp_radarPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
+              tmp_radarPlotStartRow <- tmp_distrPlotStartRow + 25 # [tmp_radarPlotStartRow] plus 24 rows to skip radar plots (size of plot at 4 inches high)
+              tmp_radarPlotColIncrease <- 7 # Number of cols to match 6 inches of plot width plus a margin
             }
           } else if(includeRadarPlots)
           {
-            tmp_radarPlotStartRow = tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
-            tmp_radarPlotColIncrease = 7 # Number of cols to match 6 inches of plot width plus a margin
+            tmp_radarPlotStartRow <- tmp_descriptionRow + length(dataColumns) + 4 # 3 rows below the end of the descriptions table
+            tmp_radarPlotColIncrease <- 7 # Number of cols to match 6 inches of plot width plus a margin
           }
 
 
@@ -1219,20 +1271,60 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
               names(tmp_clusterVarMeans) <- c("tmp_plotClusterID", "clusterMean")
 
               tmp_clusterVarMeans[,1] <- names(table(tmp_varDensityData[,1]))
-              tmp_clusterVarMeans[,2] <- t(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1])
+              tmp_clusterVarMeans[,2] <- unlist(c(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1]))
 
-              if(length(exportDecimalPlaces) == 1)
+
+# HERE --------------------------------------------------------------------
+
+
+              if( ( length(exportDecimalPlaces) == 1 & ( class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer" ) ) )
               {
-                tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean, exportDecimalPlaces) # TODO - update with [exportDecimalPlaces] matrix
+                tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean, exportDecimalPlaces)
               } else
               {
-                tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean, 3) # TODO - update with [exportDecimalPlaces] matrix
+                # Set custom formatting for current variable [tmp_currentDistrPlotVariableNumber]
+                tmp_varName <- tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,1] #[tmp_currentDistrPlotVariableNumber]
+                tmp_varFormatting <- exportDecimalPlaces %>% filter(Variables == tmp_varName)
+
+                # Format percentages as [100*value]
+                if(tmp_varFormatting$DataType == "%")
+                {
+                  tmp_clusterVarMeans$clusterMeanLabelPrep <- tmp_clusterVarMeans$clusterMean*100
+                } else
+                {
+                  tmp_clusterVarMeans$clusterMeanLabelPrep <- tmp_clusterVarMeans$clusterMean
+                }
+
+                # Round to given digits
+                tmp_clusterVarMeans$clusterMeanLabelPrep <- round(tmp_clusterVarMeans$clusterMeanLabelPrep, tmp_varFormatting$DataDecimals)
+                # Add commas if necessary
+                tmp_clusterVarMeans$clusterMeanLabelPrep <- formatC(tmp_clusterVarMeans$clusterMeanLabelPrep, format="f", big.mark=",", digits=tmp_varFormatting$DataDecimals)
+
+                # Add '%' or '$' formatting to mean label
+                if(tmp_varFormatting$DataType == "%")
+                {
+                  # Add '%'
+                  tmp_clusterVarMeans$clusterMean_formatted <- paste0(tmp_clusterVarMeans$clusterMeanLabelPrep, "%")
+
+                } else if(tmp_varFormatting$DataType == "$")
+                {
+                  # Add commas
+                  # tmp_clusterVarMeans$clusterMean_formatted <- prettyNum(tmp_clusterVarMeans$clusterMeanLabelPrep, big.mark = ",", scientific = FALSE)
+                  # formatC(tmp_clusterVarMeans$clusterMeanLabelPrep, format="f", big.mark=",", digits=tmp_varFormatting$DataDecimals)
+                  # Add '$'
+                  tmp_clusterVarMeans$clusterMean_formatted <- paste0("$", tmp_clusterVarMeans$clusterMeanLabelPrep)
+
+                } else
+                {
+                  tmp_clusterVarMeans$clusterMean_formatted <- tmp_clusterVarMeans$clusterMeanLabelPrep
+                }
+
               }
 
 
               # Create labels including means for plotting
               tmp_clusterVarMeans$clusterName <- names(tmp_currentSolutionMeansStorage)[-1]
-              tmp_clusterVarMeans$meanPlotLabels <- paste0(tmp_clusterVarMeans$clusterName, " - mean: ", tmp_clusterVarMeans$clusterMean)
+              tmp_clusterVarMeans$meanPlotLabels <- paste0(tmp_clusterVarMeans$clusterName, " - mean: ", tmp_clusterVarMeans$clusterMean_formatted)
 
               # Attach 'meanPlotLabels' to [tmp_varDensityData]
               tmp_varDensityData <- left_join(tmp_varDensityData, tmp_clusterVarMeans[, c("tmp_plotClusterID", "meanPlotLabels")], by = "tmp_plotClusterID")
@@ -1263,6 +1355,18 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
                 ,"] Values by Cluster") ) +
               theme(legend.title = element_blank(), legend.position="bottom") +
               guides(fill = guide_legend(nrow = 5))
+
+              if(tmp_varFormatting$DataType == "%")
+              {
+                tmp_distrPlot <- tmp_distrPlot + scale_x_continuous(label=scales::label_percent())
+              } else if(tmp_varFormatting$DataType == "$")
+              {
+                tmp_distrPlot <- tmp_distrPlot + scale_x_continuous(label=scales::label_dollar())
+              } else
+              {
+                tmp_distrPlot <- tmp_distrPlot + scale_x_continuous(label=scales::label_comma())
+              }
+
 
               suppressWarnings(print(tmp_distrPlot))
 
