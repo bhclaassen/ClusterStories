@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-04-17
+# Updated: 2024-04-19
 # -------------------------------------------------------------------------
 
 
@@ -23,12 +23,6 @@
 # Create structure overview
 
 # Add single-obs description
-
-# Change pooled variance to
-#   - Hedges for <=20
-# <https://www.statisticshowto.com/hedges-g/>
-#   - Cohens for >30
-# <https://www.statisticshowto.com/probability-and-statistics/statistics-definitions/cohens-d/>
 
 # -------------------------------------------------------------------------
 
@@ -267,6 +261,7 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
       # Calculate In-/Out-Cluster Pooled Variance
       # NOTE: Only ever two 'samples' because we are looking at in-/out-cluster groups
       # NOTE: Pooled variance is ( (n_1-1)*var_1 + (n_2-1)*var_2 ) / (n_1 + n_2 - 2) <https://en.wikipedia.org/wiki/Pooled_variance>
+      # Effect sizes: <https://en.wikipedia.org/wiki/Effect_size#Cohen.27s_d>
 
       if(dim(tmp_inClusterStdDiffData)[1] > 1 & dim(tmp_outClusterStdDiffData)[1] > 1)
       {
@@ -675,18 +670,37 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
     if(class(exportDecimalPlaces) == 'data.frame')
     {
-      tmp_style_floatMetricsTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[1,3])), collapse = "") ) )
-      tmp_style_floatDescriptionTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[2,3])), collapse = "") ) )
+
+      if(exportDecimalPlaces[1,3] == 0)
+      {
+        tmp_style_floatMetricsTable <- createStyle(numFmt = "#,##0", collapse = "")
+      } else
+      {
+        tmp_style_floatMetricsTable <- createStyle(numFmt = paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[1,3])), collapse = "") ) )
+      }
+
+      if(exportDecimalPlaces[2,3] == 0)
+      {
+        tmp_style_floatDescriptionTable <- createStyle(numFmt = "#,##0")
+      } else
+      {
+        tmp_style_floatDescriptionTable <- createStyle(numFmt = paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[2,3])), collapse = "") ) )
+      }
+
+
     } else
     {
-      tmp_style_floatMetricsTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces)), collapse = "") ) )
-      tmp_style_floatDescriptionTable <- tmp_style_floatMetricsTable
-    }
+      if(exportDecimalPlaces == 0)
+      {
+        tmp_style_floatMetricsTable <- createStyle(numFmt = "#,##0")
+        tmp_style_floatDescriptionTable <- tmp_style_floatMetricsTable
+      } else
+      {
+        tmp_style_floatMetricsTable <- createStyle(numFmt = paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces)), collapse = "") ) )
+        tmp_style_floatDescriptionTable <- tmp_style_floatMetricsTable
+      }
 
-    # Create parameters workbook
-    addWorksheet(tmp_wb, "Parameters")
-    writeData(tmp_wb, "Parameters", "Standard difference threshold:", startCol = 2, startRow = 2)
-    writeData(tmp_wb, "Parameters", 0.5, startCol = 3, startRow = 2)
+    }
 
   } # END EXPORT - INITIALIZATION #
 
@@ -1274,9 +1288,6 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
               tmp_clusterVarMeans[,2] <- unlist(c(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1]))
 
 
-# HERE --------------------------------------------------------------------
-
-
               if( ( length(exportDecimalPlaces) == 1 & ( class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer" ) ) )
               {
                 tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean, exportDecimalPlaces)
@@ -1449,9 +1460,16 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
       } # END ADD CLUSTER DESCRIPTIONS TO EXCEL #
 
+
+      # Add parameters worksheet to control cluster description significance highlighting
+      addWorksheet(tmp_wb, "Parameters")
+      writeData(tmp_wb, "Parameters", "Standard difference threshold:", startCol = 2, startRow = 2)
+      writeData(tmp_wb, "Parameters", 0.5, startCol = 3, startRow = 2)
+
     } # END EXPORT OF CLUSTER DESCRIPTIONS #
 
   } # END CREATING LIST OF CLUSTER DESCRIPTIONS #
+
 
 
   # EXPORT IF REQUESTED
@@ -1475,42 +1493,45 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   # tmp_clusterInfoObjectsCheck <- sapply(tmp_clusterInfoOutputObjects, exists)
   # print(tmp_clusterInfoObjectsCheck)
 
-  if(includeClusterFitMetrics) # If metrics were calculated...
-  {
-    if(includeClusterDescriptions) # If descriptions were also calculated, return both
-    {
-      tmp_clusterInfoOutput <- list(
-        "Fit Metrics"
-        , tmp_clusterFitMetrics
-        , "Descriptions"
-        , tmp_clusterDescriptionsList
-      )
-
-      return(tmp_clusterInfoOutput)
-
-    } else # Else return only fit metrics
-    {
-      tmp_clusterInfoOutput <- list(
-        "Fit Metrics"
-        , tmp_clusterFitMetrics
-      )
-
-      return(tmp_clusterInfoOutput)
-    }
-  } else if(includeClusterDescriptions) # If only descriptions were calculated, return descriptions
-  {
-    tmp_clusterInfoOutput <- list(
-      "Descriptions"
-      , tmp_clusterDescriptionsList
+  # Start returned info with a summary
+  tmp_clusterInfoOutput <- list(
+    list(
+      "[[1]] - Key"
+      , "[[2]] - Summary"
+      , "[[3]] - Cluster data"
+      , "[[4]] - Cluster descriptions (if calculated)"
+      , "[[5]] - Cluster fit metrics (if calculated)"
+    )
+    , list(
+      c("Unique ID field : ", uniqueID)
+      , c("Number of cluster solutions: ", length(clusterSolutions))
+      , c("Cluster solution(s) : ", clusterSolutions)
+      , c("Data column(s) : ", dataColumns)
+      , c("Descriptions included: ", FALSE)
+      , c("Metrics included: ", FALSE)
     )
 
-    return(tmp_clusterInfoOutput)
-  } else # Else return blank list
-  {
-    tmp_clusterInfoOutput <- list("")
+    , clusterData
+    , ""
+    , ""
+  )
 
-    return(tmp_clusterInfoOutput)
+  # Add descriptions if included
+  if(includeClusterDescriptions)
+  {
+    tmp_clusterInfoOutput[[2]][[5]][2] <- TRUE # Update summary info
+    tmp_clusterInfoOutput[[4]] <- tmp_clusterDescriptionsList
   }
+
+
+  # Add fit metrics if included
+  if(includeClusterFitMetrics)
+  {
+    tmp_clusterInfoOutput[[2]][[6]][2] <- TRUE # Update summary info
+    tmp_clusterInfoOutput[[5]] <- tmp_clusterFitMetrics
+  }
+
+  return(tmp_clusterInfoOutput)
 
 } ## END FUNCTION [createClusterDescriptions] ##
 
@@ -1519,8 +1540,15 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 # tmpClusterDescription <- tmp_clusterInfoOutput
 # # save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
 # load(file = "tmpClusterDescriptionObject.Rda")
+
+
+# observationID <- "360610089001"
+# clusterDescriptions <- foo
+# clusterSolutionsSubset = ""
 #
-# describeObservation <- function(observationID, clusterID, clusterDescriptions)
+# describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
 # {
 #
 # } ## END FUNCTION [describeObservation] ##
+
+
