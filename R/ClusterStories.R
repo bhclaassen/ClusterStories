@@ -24,6 +24,9 @@
 
 # Add single-obs description
 
+# Confirm decimal formatting
+# Change crosswalk tables to include all pairings for each solution (sum to 100% problem)
+
 # -------------------------------------------------------------------------
 
 # Function to check if user-given colors can be used
@@ -553,6 +556,24 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
     }
   }
 
+  # Add default string for formatting
+  if(class(exportDecimalPlaces) == "data.frame")
+  {
+    exportDecimalPlaces$DefaultString <- ""
+    for(strFormat in 1:dim(exportDecimalPlaces)[1])
+    {
+      if(exportDecimalPlaces[strFormat, "DataDecimals"] == 0)
+      {
+        exportDecimalPlaces[strFormat, "DefaultString"] <- "#,##0"
+      } else
+      {
+        exportDecimalPlaces[strFormat, "DefaultString"] <- "#,##0."
+      }
+
+    }
+  }
+
+
 
 # -------------------------------------------------------------------------
 
@@ -578,33 +599,33 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       if(any(exportDecimalPlaces$DataDecimals > 20))
       {
         print("NOTE: [exportDecimalPlaces] must be less than 20. It has been converted to the default value of 3")
-        exportDecimalPlaces <- 3 # If not, reset to default of 3
+        exportDecimalPlaces <- 19 # If not, reset to default of 3
       }
 
     } else if( class(exportDecimalPlaces) == "data.frame" )
     {
       # If [exportDecimalPlaces] is a data.frame, it must have three columns and the same number of rows as [dataColumns] plus 2, 1 each for metrics and descriptions table
-      if(dim(exportDecimalPlaces)[1] != (length(dataColumns) + 2) | dim(exportDecimalPlaces)[2] != 3)
+      if(dim(exportDecimalPlaces)[1] != (length(dataColumns) + 2) | dim(exportDecimalPlaces)[2] != 4)
       {
         stop("If [exportDecimalPlaces] is a data.frame then it must have 3 columns and the same number of rows as [dataColumns] plus 2 (1 for fit metric precision and 1 for descriptions table precision)")
       }
 
       # If [exportDecimalPlaces] is a data.frame, it must start with a row for 'Metrics' and a row for 'Descriptions'
-      if(exportDecimalPlaces[1,1] != 'Metrics' | exportDecimalPlaces[2,1] != 'Descriptions')
+      if(exportDecimalPlaces[1,1] != 'Metrics' | exportDecimalPlaces[2,1] != 'Standard Mean Differences')
       {
-        stop("[exportDecimalPlaces] data.frame must have the first row be named 'Metrics' and the second row be named 'Descriptions'")
+        stop("[exportDecimalPlaces] data.frame must have the first row be named 'Metrics' and the second row be named 'Standard Mean Differences'")
       }
 
 
       if(any(exportDecimalPlaces$DataDecimals < 0))
       {
-        print("NOTE: [exportDecimalPlaces] 'DataDecimal' values must all be non-negative. Negative values have been converted to the default value of 3")
+        print("NOTE: [exportDecimalPlaces] 'DataDecimals' values must all be non-negative. Negative values have been converted to the default value of 3")
         exportDecimalPlaces[which(exportDecimalPlaces$DataDecimals < 2), "DataDecimals"] <- 3 # If not, reset to default of 3
       }
 
       if(any(exportDecimalPlaces$DataDecimals > 20))
       {
-        print("NOTE: [exportDecimalPlaces] 'DataDecimal' values must all be less than 20. Values over this have been converted to the default value of 3")
+        print("NOTE: [exportDecimalPlaces] 'DataDecimals' values must all be less than 20. Values over this have been converted to the default value of 3")
         exportDecimalPlaces[which(exportDecimalPlaces$DataDecimals > 20), "DataDecimals"] <- 3 # If not, reset to default of 3
       }
 
@@ -670,24 +691,8 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
     if(class(exportDecimalPlaces) == 'data.frame')
     {
-
-      if(exportDecimalPlaces[1,3] == 0)
-      {
-        tmp_style_floatMetricsTable <- createStyle(numFmt = "#,##0", collapse = "")
-      } else
-      {
-        tmp_style_floatMetricsTable <- createStyle(numFmt = paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[1,3])), collapse = "") ) )
-      }
-
-      if(exportDecimalPlaces[2,3] == 0)
-      {
-        tmp_style_floatDescriptionTable <- createStyle(numFmt = "#,##0")
-      } else
-      {
-        tmp_style_floatDescriptionTable <- createStyle(numFmt = paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces[2,3])), collapse = "") ) )
-      }
-
-
+      tmp_style_floatMetricsTable <- createStyle(numFmt = paste0( exportDecimalPlaces[1, "DefaultString"], paste0(rep("0", (exportDecimalPlaces[1, "DataDecimals"])), collapse = "") ) )
+      tmp_style_floatDescriptionTable <- createStyle(numFmt = paste0( exportDecimalPlaces[2, "DefaultString"], paste0(rep("0", (exportDecimalPlaces[2, "DataDecimals"])), collapse = "") ) )
     } else
     {
       if(exportDecimalPlaces == 0)
@@ -1126,7 +1131,14 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
           # Format numbers using [exportDecimalPlaces]
           if(class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer")
           {
-            tmp_style_userSpecifiedFloat <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces)), collapse = "") ) )
+            if(exportDecimalPlaces == 0)
+            {
+              tmp_style_userSpecifiedFloat <- createStyle(numFmt= paste0( "#,##0", paste0(rep("0", (exportDecimalPlaces)), collapse = "") ) )
+            } else
+            {
+              tmp_style_userSpecifiedFloat <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (exportDecimalPlaces)), collapse = "") ) )
+            }
+
             addStyle(tmp_wb, tmp_worksheetName, style=tmp_style_userSpecifiedFloat, cols = c((tmp_currentCol+1):(tmp_currentCol+3)), rows = c((tmp_descriptionRow+1):(tmp_descriptionRow+1+dim(tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[tmp_clusterInSolution]][[2]])[1]-1)), stack = F, gridExpand = T)
           } else # [exportDecimalPlaces] cleaned above so must be a number or a data.frame
           {
@@ -1140,17 +1152,17 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
               if(tmp_currentVarFormatting$DataType == "%")
               {
                 # Set custom style for percents
-                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( "0.", paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = ""),  "%") )
+                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( tmp_currentVarFormatting$DefaultString, paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = ""),  "%") )
 
               } else if(tmp_currentVarFormatting$DataType == "$")
               {
                 # Set custom style for dollars
-                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( "$#,##0.", paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = "") ) )
+                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( "$", tmp_currentVarFormatting$DefaultString, paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = "") ) )
 
               } else if(tmp_currentVarFormatting$DataType == "")
               {
                 # Set custom style for counts
-                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( "#,##0.", paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = "") ) )
+                tmp_exportDecimalPlaces_floatDescriptionTable <- createStyle(numFmt= paste0( tmp_currentVarFormatting$DefaultString, paste0(rep("0", (tmp_currentVarFormatting$DataDecimals)), collapse = "") ) )
 
               } else
               {
