@@ -19,7 +19,6 @@
 
 
 # TODO --------------------------------------------------------------------
-# Add one-pager describing how to use product
 # Create structure overview
 
 # Add single-obs description
@@ -982,98 +981,103 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         tmp_crosswalkStartRow <- tmp_crosswalkStartRow + 3
 
         # Iterate across all combinations of solutions
-        for(tmp_crosswalkSolution_1 in 1:(length(clusterSolutions)-1))
+        for(tmp_crosswalkSolution_1 in 1:length(clusterSolutions))
         {
           # Set number of clusters in solution #1
           tmp_lengthCrosswalkSolution_1 <- length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_1]]))
 
-          for(tmp_crosswalkSolution_2 in (tmp_crosswalkSolution_1+1):length(clusterSolutions))
+          for(tmp_crosswalkSolution_2 in 1:length(clusterSolutions))
           {
-            # Set number of clusters in solution #2
-            tmp_lengthCrosswalkSolution_2 <- length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_2]]))
 
-            # Write cluster solution names and directional-read arrows for current table
-            writeData(tmp_wb, "Cluster Sizes", clusterSolutions[tmp_crosswalkSolution_1], startRow = (tmp_crosswalkStartRow+1), startCol = (tmp_crosswalkStartCol-1)) # Cluster solution name for [tmp_crosswalkSolution_1]
-            # writeFormula(tmp_wb, "Cluster Sizes", x="UNICHAR(8595)", startRow = (tmp_crosswalkStartRow+2), startCol = (tmp_crosswalkStartCol-2)) # Cluster solution read-arrow for [tmp_crosswalkSolution_1] (In excel: UNICHAR(8595))
-            writeData(tmp_wb, "Cluster Sizes", clusterSolutions[tmp_crosswalkSolution_2], startRow = (tmp_crosswalkStartRow-1), startCol = (tmp_crosswalkStartCol+1)) # Cluster solution name for [tmp_crosswalkSolution_2]
-            # writeFormula(tmp_wb, "Cluster Sizes", x="UNICHAR(8594)", startRow = (tmp_crosswalkStartRow-1), startCol = (tmp_crosswalkStartCol+1)) # Cluster solution read-arrow for [tmp_crosswalkSolution_2] (In excel: UNICHAR(8594))
-
-
-            # Format cluster solution names
-            addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow+1), cols = (tmp_crosswalkStartCol-1))
-            addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow-1), cols = (tmp_crosswalkStartCol+1))
-
-            # print(paste0(clusterSolutions[tmp_crosswalkSolution_1], ",", clusterSolutions[tmp_crosswalkSolution_2]))
-
-            # Create proportions table of cluster crosswalk table
-            tmp_crosswalkTable <- proportions(
-                table(
-                  clusterData[,clusterSolutions[tmp_crosswalkSolution_1]]
-                  , clusterData[,clusterSolutions[tmp_crosswalkSolution_2]]
-                )
-                , margin = 1
-              )
-            # print(tmp_crosswalkTable)
-
-            # Write crosswalk table
-            writeData(tmp_wb, "Cluster Sizes", tmp_crosswalkTable, startRow = tmp_crosswalkStartRow, startCol = tmp_crosswalkStartCol)
-
-            # Format cluster names
-            addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = c((tmp_crosswalkStartRow+1):(tmp_crosswalkStartRow+1+tmp_lengthCrosswalkSolution_1-1)), cols = tmp_crosswalkStartCol) # Row names
-            addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = tmp_crosswalkStartRow, cols = c((tmp_crosswalkStartCol+1):(tmp_crosswalkStartCol+1+tmp_lengthCrosswalkSolution_2-1))) # Column names
-
-            # Format proportions table
-            # For percent formatting, if 0, format as % with no decimals, else, format as % with 1 decimal
-            # For background, color in 5 shades from white to green
-            for(tmp_rowI in 1:tmp_lengthCrosswalkSolution_1)
+            if(tmp_crosswalkSolution_1 != tmp_crosswalkSolution_2)
             {
-              # Give adjustment within spreadsheet to start at table top-left corner
-              tmp_rowI_propTable <- tmp_rowI + tmp_crosswalkStartRow
+              # Set number of clusters in solution #2
+              tmp_lengthCrosswalkSolution_2 <- length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_2]]))
 
-              for(tmp_colJ in 1:tmp_lengthCrosswalkSolution_2)
+              # Write cluster solution names and directional-read arrows for current table
+              writeData(tmp_wb, "Cluster Sizes", clusterSolutions[tmp_crosswalkSolution_1], startRow = (tmp_crosswalkStartRow+1), startCol = (tmp_crosswalkStartCol-1)) # Cluster solution name for [tmp_crosswalkSolution_1]
+              # writeFormula(tmp_wb, "Cluster Sizes", x="UNICHAR(8595)", startRow = (tmp_crosswalkStartRow+2), startCol = (tmp_crosswalkStartCol-1)) # Cluster solution read-arrow for [tmp_crosswalkSolution_1] (In excel: UNICHAR(8595))
+              writeData(tmp_wb, "Cluster Sizes", clusterSolutions[tmp_crosswalkSolution_2], startRow = (tmp_crosswalkStartRow-1), startCol = (tmp_crosswalkStartCol+1)) # Cluster solution name for [tmp_crosswalkSolution_2]
+              # writeFormula(tmp_wb, "Cluster Sizes", x="UNICHAR(8594)", startRow = (tmp_crosswalkStartRow-1), startCol = (tmp_crosswalkStartCol+2)) # Cluster solution read-arrow for [tmp_crosswalkSolution_2] (In excel: UNICHAR(8594))
+
+
+              # Format cluster solution names
+              addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow+1), cols = (tmp_crosswalkStartCol-1))
+              addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow-1), cols = (tmp_crosswalkStartCol+1))
+
+              # print(paste0(clusterSolutions[tmp_crosswalkSolution_1], ",", clusterSolutions[tmp_crosswalkSolution_2]))
+
+              # Create proportions table of cluster crosswalk table
+              tmp_crosswalkTable <- proportions(
+                  table(
+                    clusterData[,clusterSolutions[tmp_crosswalkSolution_1]]
+                    , clusterData[,clusterSolutions[tmp_crosswalkSolution_2]]
+                  )
+                  , margin = 1
+                )
+              # print(tmp_crosswalkTable)
+
+              # Write crosswalk table
+              writeData(tmp_wb, "Cluster Sizes", tmp_crosswalkTable, startRow = tmp_crosswalkStartRow, startCol = tmp_crosswalkStartCol)
+
+              # Format cluster names
+              addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = c((tmp_crosswalkStartRow+1):(tmp_crosswalkStartRow+1+tmp_lengthCrosswalkSolution_1-1)), cols = tmp_crosswalkStartCol) # Row names
+              addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_boldAndCenter, rows = tmp_crosswalkStartRow, cols = c((tmp_crosswalkStartCol+1):(tmp_crosswalkStartCol+1+tmp_lengthCrosswalkSolution_2-1))) # Column names
+
+              # Format proportions table
+              # For percent formatting, if 0, format as % with no decimals, else, format as % with 1 decimal
+              # For background, color in 5 shades from white to green
+              for(tmp_rowI in 1:tmp_lengthCrosswalkSolution_1)
               {
                 # Give adjustment within spreadsheet to start at table top-left corner
-                tmp_colJ_propTable <- tmp_colJ + tmp_crosswalkStartCol
+                tmp_rowI_propTable <- tmp_rowI + tmp_crosswalkStartRow
 
-                # print(paste0(tmp_rowI_propTable, ",", tmp_colJ_propTable))
+                for(tmp_colJ in 1:tmp_lengthCrosswalkSolution_2)
+                {
+                  # Give adjustment within spreadsheet to start at table top-left corner
+                  tmp_colJ_propTable <- tmp_colJ + tmp_crosswalkStartCol
 
-                # addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow-1), cols = (tmp_crosswalkStartCol))
-                # print(tmp_crosswalkTable[tmp_rowI,tmp_colJ])
-                # print(tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 0 | tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 1)
+                  # print(paste0(tmp_rowI_propTable, ",", tmp_colJ_propTable))
 
-                if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 0 | tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 1)
-                {
-                  addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_pctZeroOne, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable)
-                } else
-                {
-                  addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_pct, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable)
-                }
+                  # addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_bold, rows = (tmp_crosswalkStartRow-1), cols = (tmp_crosswalkStartCol))
+                  # print(tmp_crosswalkTable[tmp_rowI,tmp_colJ])
+                  # print(tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 0 | tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 1)
 
-                # Color tables with background spectrum white:green for [0,1] proportion
-                if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.2)
-                {
-                  addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_1, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
-                } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.4)
-                {
-                  addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_2, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
-                } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.6)
-                {
-                  addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_3, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
-                } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.8)
-                {
-                  addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_4, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
-                } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] <= 1)
-                {
-                  addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_5, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
-                } else
-                {
-                  print(paste0("NOTE: Non-numeric value in 'Cluster Sizes' tab at row/col [", tmp_rowI_propTable, ",", tmp_colJ_propTable, "]"))
+                  if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 0 | tmp_crosswalkTable[tmp_rowI,tmp_colJ] == 1)
+                  {
+                    addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_pctZeroOne, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable)
+                  } else
+                  {
+                    addStyle(tmp_wb, "Cluster Sizes", style=tmp_style_pct, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable)
+                  }
+
+                  # Color tables with background spectrum white:green for [0,1] proportion
+                  if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.2)
+                  {
+                    addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_1, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+                  } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.4)
+                  {
+                    addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_2, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+                  } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.6)
+                  {
+                    addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_3, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+                  } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] < 0.8)
+                  {
+                    addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_4, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+                  } else if(tmp_crosswalkTable[tmp_rowI,tmp_colJ] <= 1)
+                  {
+                    addStyle(tmp_wb, "Cluster Sizes", style = tmp_style_greenShade_5, rows = tmp_rowI_propTable, cols = tmp_colJ_propTable, stack = TRUE)
+                  } else
+                  {
+                    print(paste0("NOTE: Non-numeric value in 'Cluster Sizes' tab at row/col [", tmp_rowI_propTable, ",", tmp_colJ_propTable, "]"))
+                  }
                 }
               }
-            }
 
-            # Iterate row anchor for current solutions specified by [tmp_crosswalkSolution_1]
-            tmp_crosswalkStartCol <- tmp_crosswalkStartCol + length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_2]])) + 3
+              # Iterate row anchor for current solutions specified by [tmp_crosswalkSolution_1]
+              tmp_crosswalkStartCol <- tmp_crosswalkStartCol + length(unique(clusterData[, clusterSolutions[tmp_crosswalkSolution_2]])) + 3
+
+            } # End add-table if statement; add if [tmp_lengthCrosswalkSolution_1] != [tmp_lengthCrosswalkSolution_2]
 
           } # End loop across current [tmp_crosswalkSolution_2]
 
@@ -1084,6 +1088,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
         } # End loop across current [tmp_crosswalkSolution_1]
       } # ALL CROSSWALK TABLES ADDED #
+
 
       # Add cluster stories -----------------------------------------------
 
