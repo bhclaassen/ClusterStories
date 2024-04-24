@@ -1,7 +1,7 @@
 ---
 title: "ClusterStories Package Example"
 # author: "BHC"
-# date: "2024-04-23"
+# date: "2024-04-24"
 output: html_document
 ---
 
@@ -79,23 +79,33 @@ If you go to your current working directory (Use 'getwd()' to find this and 'set
 #### Cluster Size Tables
 The first thing you will see when you open this Excel file is a set of tables. These show the counts and proportions of each group across the solution.
 
-![](Images/01_SimpleExample-CountsTable.png)
 
-![](Images/02_SimpleExample-ProportionsTable.png)  
+<!--![](Images/SimpleExample-CountsTable.png)-->
+<center><img src="Images/SimpleExample-CountsTable.png" width="50%" height="50%"></center>
+
+
+<!--![](Images/SimpleExample-ProportionsTable.png)  -->
+<center><img src="Images/SimpleExample-ProportionsTable.png" width="50%" height="50%"></center>
+
 
 <br/>
 
-These tables are on the tab labeled *Cluster Sizes*.  
-![](Images/03_SimpleExample-CountsTab.png)
+These tables are on the tab labeled *Cluster Sizes*: <img src="Images/SimpleExample-CountsTab.png" width="13%" height="13%">
+<!--![](Images/SimpleExample-CountsTab.png)-->
+
 
 <br/>
 
 From the second table we can see that the fourth cluster is fairly small. This is potentially concerning for a generated set of clusters, but as these are real-life groupings we won't worry about it here.
 
 #### Cluster Descriptions
-Next we have the description of the groups. <u>*This tab is the heart of the package*</u>.
+Next we have the description of the groups. <u>*This tab is the heart of the package*</u>. In this example, the tab has the name we gave (BoroughName) and the number of clusters in the solution:  <img src="Images/SimpleExample-BoroughsTab.png" width="22%" height="22%">
 
-![](Images/04_SimpleExample-ManhattanDescription.png)
+
+<!--![](Images/SimpleExample-ManhattanDescription.png)-->
+<center><img src="Images/SimpleExample-ManhattanDescription.png" width="50%" height="50%"></center>
+
+<br>
 
 Let's discuss what we're seeing here. This table tells the story of Manhattan as compared to the rest of the New York City Boroughs, at least for the data we've chosen to include.
 
@@ -117,7 +127,9 @@ The overall story that this data tells us is that Manhattan is defined by higher
 
 Let's look at a contrasting cluster, Staten Island.
 
-![](Images/05_SimpleExample-StatenIslandDescription.png)
+
+<!--![](Images/SimpleExample-StatenIslandDescription.png)-->
+<center><img src="Images/SimpleExample-StatenIslandDescription.png" width="50%" height="50%"></center>
 
 In comparison to the city as a whole, this borough stands out as having people that are more likely to drive to work, and vote Republican. They are also notably more likely to be married, live less densely, and not vote Democratic. This story all aligns with Staten Island's reputation as a part of New York City outside the hustle and bustle usually associated with the metropolis.
 
@@ -127,7 +139,10 @@ Last but not least, the *[describeClusters]* function creates a series of plots 
 
 These are density plots that show the distribution of one variable per plot and a distribution curve for each group. Additionally the means for each cluster are shown with a dotted line.
 
-![](Images/06_SimpleExample-DroveToWorkDistrPlot.png)
+<!--![](Images/SimpleExample-DroveToWorkDistrPlot.png)-->
+<center><img src="Images/SimpleExample-DroveToWorkDistrPlot.png" width="50%" height="50%"></center>
+
+
 
 As we saw in the cluster descriptions [above](#cluster-descriptions) there are clear differences between Manhattan and Staten Island when it comes to the percent of workers who drive to work. This is true both in the means (as shown as dotted lines), but also in the general distribution of the data. This plot shows us that in fact, many neighborhoods in Manhattan have next to no people driving to work at all, where as Staten Island has a sizeable number of neighborhoods with three-quarters or more of residents driving as a means of commuting.
 
@@ -191,12 +206,12 @@ $$ s = \sqrt{\frac{({n}_{1}-1){s}_1^{2} + ({n}_{2}-1){s}_2^{2}} {{n}_{1} + {n}_{
 
 Suggested interpretations of effect sizes magnitudes are shown below. The default for highlighting in **ClusterStories** is set to 0.5 for a 'medium' effect size. This can be changed in the *Parameters* tab in the Excel file.
 
-<img src="Images/07_SimpleExample-CohensDMagnitudes.png" alt="Cohen's d Magnitudes Table" width="200"/>
+<center><img src="Images/SimpleExample-CohensDMagnitudes.png" width="15%" height="15%"></center>
 
-Sources:  
-Cohen, Jacob. Statistical power analysis for the behavioral sciences. Routledge, 2013.  
-Sawilowsky, Shlomo S. "New effect size rules of thumb." Journal of modern applied statistical methods (2009): 597-599.  
-[Wikipedia](https://en.wikipedia.org/wiki/Effect_size#Cohen.27s_d)
+<u>*Sources*</u>*:*  
+ - Cohen, Jacob. Statistical power analysis for the behavioral sciences. Routledge, 2013.  
+ - Sawilowsky, Shlomo S. "New effect size rules of thumb." Journal of modern applied statistical methods (2009): 597-599.  
+ - [Wikipedia](https://en.wikipedia.org/wiki/Effect_size#Cohen.27s_d)
 
 
 
@@ -236,7 +251,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 
 ### Example Clustering
-This clustering was done using Hierarchical clustering on [standardized data](#standardized-data) using Euclidean distance
+This clustering was done using Hierarchical clustering on [standardized data](#standardized-data) using Euclidean distance.
 
 
 ### Standardized Data

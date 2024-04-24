@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-04-23
+# Updated: 2024-04-25
 # -------------------------------------------------------------------------
 
 
@@ -1099,7 +1099,22 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         tmp_numClustersInSolution <- tmp_clusterDescriptionsList[[tmp_clusterStorySolution]][[1]][[1]][1,2] # Returns second entry in first proportion table for current solution [tmp_clusterStorySolution]
 
         # Add worksheet
-        tmp_worksheetName <- paste0(tmp_numClustersInSolution, " Clusters (", clusterSolutions[tmp_clusterStorySolution],")")
+        tmp_worksheetName <- paste0(clusterSolutions[tmp_clusterStorySolution], " (k=", tmp_numClustersInSolution, ")")
+
+        # Check if worksheet name complies with Excel restrictions
+        if(nchar(tmp_worksheetName) > 31)
+        {
+          # If name is too long, find what number we have to work with
+          tmp_tabNameLengthForNumClusters <- 5 + nchar(tmp_numClustersInSolution)
+          tmp_tabNameLengthForClusterName <- 31-tmp_tabNameLengthForNumClusters
+
+          # Create a shorter name so that the cluster number and maximum of the given name can be included
+          tmp_worksheetName <- paste0(
+            substr(clusterSolutions[tmp_clusterStorySolution], 1, tmp_tabNameLengthForClusterName)
+            , " (k=", tmp_numClustersInSolution, ")")
+
+          print(paste0("NOTE: Excel tab name for cluster solution [", clusterSolutions[tmp_clusterStorySolution], "] has been abbreviated as: [", tmp_worksheetName, "]"))
+        }
         addWorksheet(tmp_wb, tmp_worksheetName)
 
         # Set first table column
