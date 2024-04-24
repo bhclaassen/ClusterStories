@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-04-19
+# Updated: 2024-04-23
 # -------------------------------------------------------------------------
 
 
@@ -595,10 +595,10 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
         exportDecimalPlaces <- 3 # If not, reset to default of 3
       }
 
-      if(any(exportDecimalPlaces$DataDecimals > 20))
+      if(exportDecimalPlaces > 20)
       {
-        print("NOTE: [exportDecimalPlaces] must be less than 20. It has been converted to the default value of 3")
-        exportDecimalPlaces <- 19 # If not, reset to default of 3
+        print("NOTE: [exportDecimalPlaces] must be less than or equal to 20. It has been converted to the closest valid value of 20")
+        exportDecimalPlaces <- 20 # If not, closes valid value
       }
 
     } else if( class(exportDecimalPlaces) == "data.frame" )
@@ -1305,9 +1305,33 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
               tmp_clusterVarMeans[,2] <- unlist(c(tmp_currentSolutionMeansStorage[tmp_currentDistrPlotVariableNumber,-1]))
 
 
+
+# HERE --------------------------------------------------------------------
+
+              # Create legend text for cluster means
               if( ( length(exportDecimalPlaces) == 1 & ( class(exportDecimalPlaces) == "numeric" | class(exportDecimalPlaces) == "integer" ) ) )
               {
+                # Code here simply matches the more complex requirements in the 'else' condition
                 tmp_clusterVarMeans$clusterMean <- round(tmp_clusterVarMeans$clusterMean, exportDecimalPlaces)
+
+                tmp_varFormatting <- as.data.frame(matrix(,1,3))
+                names(tmp_varFormatting) <- c("Variables", "DataType", "DataDecimals")
+
+                tmp_varFormatting[1,] <- c("", "", exportDecimalPlaces)
+                tmp_varFormatting[,3] <- as.numeric(tmp_varFormatting[,3])
+
+                # Set means
+                tmp_clusterVarMeans$clusterMeanLabelPrep <- tmp_clusterVarMeans$clusterMean
+
+                # Round to given digits
+                tmp_clusterVarMeans$clusterMeanLabelPrep <- round(tmp_clusterVarMeans$clusterMeanLabelPrep, tmp_varFormatting$DataDecimals)
+                # Add commas if necessary
+                tmp_clusterVarMeans$clusterMeanLabelPrep <- formatC(tmp_clusterVarMeans$clusterMeanLabelPrep, format="f", big.mark=",", digits=tmp_varFormatting$DataDecimals)
+
+                tmp_clusterVarMeans$clusterMean_formatted <- tmp_clusterVarMeans$clusterMeanLabelPrep
+
+
+
               } else
               {
                 # Set custom formatting for current variable [tmp_currentDistrPlotVariableNumber]
@@ -1558,14 +1582,21 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 # # save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
 # load(file = "tmpClusterDescriptionObject.Rda")
 
-
+#
 # observationID <- "360610089001"
 # clusterDescriptions <- foo
 # clusterSolutionsSubset = ""
 #
-# describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
-# {
+# # describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
+# # {
+#     # Pull unique ID from [clusterDescriptions] object
+#     tmp_uniqueID <- clusterDescriptions[[2]][[1]][2]
 #
-# } ## END FUNCTION [describeObservation] ##
+#     # Pull observation to compare from cluster data in the [clusterDescriptions] object
+#     tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueID] == observationID),]
+#     # clusterDescriptions[[3]] %>% filter(tmp_uniqueID == observationID)
+#
+#
+# # } ## END FUNCTION [describeObservation] ##
 
 
