@@ -1,6 +1,6 @@
 ---
-title: "ClusterStories Package Example"
-# author: "BHC"
+title: "ClusterStories R Package Example"
+author: "Ben Claassen"
 # date: "2024-04-24"
 output: html_document
 ---
@@ -9,22 +9,20 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**ClusterStories** is a pair of R functions that provides in-depth comparisons for any set of clusters or groupings for your dataset.
+<br>
+**ClusterStories** provides in-depth comparisons for any set of clusters or groupings in a data set. These comparisons are exported to an analysis-ready Excel file and include:
 
-These comparisons are exported in a ready-to-use Excel file and include:
-
-* Statistically significant differences between groups
+* An overview of statistically significant differences between clusters
 * Detailed plots of variables by cluster
 * Statistical analysis of cluster solution fit
 
-You can also look at an individual observation in your data and see how it fits within its cluster group. Together, these tell the 'story' of your data.
+You can also look at an individual observation in your data and see how it fits within its cluster group.
 
-
-To see how you can start with this package, we will walk through an example dataset.
+To see how you can start with this package and tell your own cluster stories, we will walk through an example data set and analysis below.
 
 
 ### **ClusterStories** Example
-Included in **ClusterStories** is dataset looking at the New York City Boroughs. To start, be sure to install the package from GitHub. Note, you will need the package **devtools** to do this.
+Included in the **ClusterStories** package is a data set looking at neighborhoods in the New York City Boroughs. To start, install the package from GitHub. Note, you will need the **devtools** package to install a package from GitHub.
 
 ```{r, echo = T, include=F}
 setwd("/Users/benclaassen/Documents/_Workshop/_Code Utilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Data_Cleaned")
@@ -41,44 +39,45 @@ load(file = "NewYorkCityBoroughs.Rda")
 head(NewYorkCityBoroughs)
 ```
 
-This 2020 dataset is at the U.S. Census Block Group level, and includes an array of social, economic, demographic, and political variables, all of which are part of the story of any American neighborhood. This data is specifically for the five New York City Boroughs in New York, NY, and which borough each Block Group belongs to is indicated in the variable 'BoroughName'. Please see below for [data sources](#data-description-and-sources).
+
+The observations in this data set are at the U.S. Census Block Group level, and are for the year 2020.
+These data cover an array of social, economic, demographic, and political variables, all of which are key parts of the story of any American neighborhood. This data is specifically for the five New York City Boroughs in New York, NY, and which borough each Block Group belongs to is indicated in the variable 'BoroughName'. Please see below for [data sources](#data-description-and-sources).
 
 For more information on how the example clustering IDs 'ExampleClusteringID_#' were generated, please see [this section](#example-clustering).
 
 ### Using **ClusterStories** on Example Data
-Once you have cleaned your data and created your clusters, you are ready to see what stories your groups are telling. In the code below we will use the New York City Boroughs example data, but if you want help in generating your own clusters, there are great resources online.
+Once you have cleaned your data and created your clusters, you are ready to generate their stories. In the code below we will use the New York City Boroughs example data, but if you want help in generating your own clusters, there are great resources online.
 
 To begin, call the **ClusterStories** function *[describeClusters]* with the following parameters.
 
 ```{r}
-clusterStory <- c(
-  clusterData = NewYorkCityBoroughs # Your dataset
-  , uniqueID = "CensusBlockGroup" # A column of unique IDs for each row/observation
-  , clusterSolutions = c("BoroughName") # A list columns containing the group IDs
-  , dataColumns = c(
-    "PopulationDensity"
-    , "DroveToWork_percent"
-    , "BachelorsDegreeOrHigher_percent"
-    , "MarriedHouseholds_percent"
-    , "MedianAge"
-    , "MedianHouseholdIncome"
-    , "HouseholdsInPoverty_percent"
-    , "FamilyHouseholdsInPoverty_percent"
-    , "RepublicanVoters_percent"
-    , "DemocraticVoters_percent"
-    , "OtherVoters_percent"
-  ) # A list of columns containing the data to examine
-)
+# clusterStory <- describeClusters(
+#   clusterData = NewYorkCityBoroughs # Your dataset
+#   , uniqueID = "CensusBlockGroup" # A column of unique IDs for each row/observation
+#   , clusterSolutions = c("BoroughName") # A list columns containing the group IDs
+#   , dataColumns = c(
+#     "PopulationDensity"
+#     , "DroveToWork_percent"
+#     , "BachelorsDegreeOrHigher_percent"
+#     , "MarriedHouseholds_percent"
+#     , "MedianAge"
+#     , "MedianHouseholdIncome"
+#     , "HouseholdsInPoverty_percent"
+#     , "FamilyHouseholdsInPoverty_percent"
+#     , "RepublicanVoters_percent"
+#     , "DemocraticVoters_percent"
+#     , "OtherVoters_percent"
+#   ) # A list of columns containing the data to examine
+# )
 
 ```
 
-These are the only required parameters for generating your cluster stories. Note that the last three parameters can be column names or numbers, the function can handle it. Now let's see what we get when we run this.
+These are the only required parameters for generating your cluster stories. For flexibility, the last three parameters can be entered as column names or as column numbers. Now let's see what we get when we run this.
 
-If you go to your current working directory (Use 'getwd()' to find this and 'setwd()' to change it), then you will find an Excel file named 'Cluster Descriptions YYYY-MM-DD_HH-MM-SS.xlsx' where 'YYYY-MM-DD_HH-MM-SS' is a time stamp recording the file creation.
+If you go to your current working directory (Use 'getwd()' to find this directory and 'setwd()' to change it), then you will find an Excel file named 'Cluster Descriptions YYYY-MM-DD_HH-MM-SS.xlsx' where 'YYYY-MM-DD_HH-MM-SS' is a time stamp recording the time and date of the file's creation.
 
 #### Cluster Size Tables
-The first thing you will see when you open this Excel file is a set of tables. These show the counts and proportions of each group across the solution.
-
+The first thing you will see when you open this Excel file is a set of tables. These show the counts and proportions of each individual group across the solution.
 
 <!--![](Images/SimpleExample-CountsTable.png)-->
 <center><img src="Images/SimpleExample-CountsTable.png" width="50%" height="50%"></center>
@@ -88,18 +87,19 @@ The first thing you will see when you open this Excel file is a set of tables. T
 <center><img src="Images/SimpleExample-ProportionsTable.png" width="50%" height="50%"></center>
 
 
-<br/>
+<br>
 
 These tables are on the tab labeled *Cluster Sizes*: <img src="Images/SimpleExample-CountsTab.png" width="13%" height="13%">
 <!--![](Images/SimpleExample-CountsTab.png)-->
 
-
-<br/>
+<br>
 
 From the second table we can see that the fourth cluster is fairly small. This is potentially concerning for a generated set of clusters, but as these are real-life groupings we won't worry about it here.
 
+<br>
+
 #### Cluster Descriptions
-Next we have the description of the groups. <u>*This tab is the heart of the package*</u>. In this example, the tab has the name we gave (BoroughName) and the number of clusters in the solution:  <img src="Images/SimpleExample-BoroughsTab.png" width="22%" height="22%">
+Next we have the description of the groups. <u>*This tab is the heart of the package*</u>. In this example, the tab has the name we gave (BoroughName) and the number of clusters in the solution:  <img src="Images/SimpleExample-BoroughsTab.png" width="19%" height="19%">
 
 
 <!--![](Images/SimpleExample-ManhattanDescription.png)-->
@@ -107,104 +107,126 @@ Next we have the description of the groups. <u>*This tab is the heart of the pac
 
 <br>
 
-Let's discuss what we're seeing here. This table tells the story of Manhattan as compared to the rest of the New York City Boroughs, at least for the data we've chosen to include.
+So what are we seeing here? This table tells the story of Manhattan in comparison to the rest of the New York City Boroughs, at least for the data we've chosen to include. First is the cluster number and name, followed by how many observations are in this borough, and what proportion that is of the total. These remind us what we're looking at and show how much of the total data set is covered by Manhattan's neighborhoods.
 
-
-First is the cluster number and name, followed by it's size and proportion. These remind us what we're looking at and give a sense of how its size compares with the other clusters.
-
-Next is a table with the following columns:
+After this summary information is a table with the following columns:
 
 * Variable name
 * Variable mean within the cluster
 * Difference in variable mean between the cluster shown and all other clusters
 * The [standardized value](#how-are-standardized-differences-in-means-calculated) for these differences in means
 
-Let's focus on the final column. Values highlighted in <span style="background-color: #33F5B7">green</span> are ones whose differences in means are statistically significant and positive. So, for example, Manhattan has a higher population density than the surrounding area, and this difference is statistically significant.
+The 'Mean' and 'Mean Diff' columns show the averages for each variable within the given cluster, and show how what that difference in averages is between the cluster and all others in the solution set. These are interesting in their own right, but the real contribution that this function makes is in the final column, Standardized Mean Differences.
 
-Values highlighted in <span style="background-color: #FCB099">orange</span> are statistically significantly below the other area. Driving to work, for example, is notably less common in Manhattan. Both of these should fit our intuition of the borough.
+This column has values that show if a difference between clusters is statistically meaningful. Values highlighted in <span style="background-color: #33F5B7">green</span> are ones whose differences in means are statistically significant and positive. So, for example, Manhattan has a higher population density than the surrounding area, and this difference is statistically significant.
 
-The overall story that this data tells us is that Manhattan is defined by higher levels of education and income, it is a denser area, and its populace tend to vote Democratic or Other as compared to the rest of the city. It is also a borough that is particularly defined by workers not driving to work, and by voters not being Republicans. Manhattan is the urban core of the largest city in the United States, and all of these descriptions comport with that.
+Values highlighted in <span style="background-color: #FCB099">orange</span> are statistically significantly below the other areas. Driving to work, for example, is notably less common in Manhattan as compared to the rest of New York City. Both of these should fit our intuition of the borough.
 
-Let's look at a contrasting cluster, Staten Island.
+In total, this table tells the story that Manhattan is defined by higher levels of education and income, it is a denser area, and its populace tend to vote Democratic or for other parties as compared to the rest of the city. It is also a borough that is particularly defined by workers not commuting by car, and by voters not being Republicans. This description fits well for the urban core of the largest city in the United States.
 
+Now let's look at a contrasting cluster, Staten Island.
 
 <!--![](Images/SimpleExample-StatenIslandDescription.png)-->
 <center><img src="Images/SimpleExample-StatenIslandDescription.png" width="50%" height="50%"></center>
 
-In comparison to the city as a whole, this borough stands out as having people that are more likely to drive to work, and vote Republican. They are also notably more likely to be married, live less densely, and not vote Democratic. This story all aligns with Staten Island's reputation as a part of New York City outside the hustle and bustle usually associated with the metropolis.
+In comparison to the city as a whole, this borough stands out as having people that are more likely to drive to work, and vote Republican. They are also notably more likely to be married, live less densely, and not vote Democratic. This story aligns with Staten Island's reputation as a part of New York City outside the hustle and bustle usually associated with the metropolis.
 
+<br>
 
 #### Variable Density Plots
-Last but not least, the *[describeClusters]* function creates a series of plots to help visualize how the clusters differ from each other.
+Last but not least, the *[describeClusters]* function creates a series of plots to help visualize how the clusters differ from each other within each given variable.
 
-These are density plots that show the distribution of one variable per plot and a distribution curve for each group. Additionally the means for each cluster are shown with a dotted line.
+These are density plots that show the data distribution of one variable per plot with a distribution curve for each group. Additionally the means for each cluster are shown with a dotted line.
 
 <!--![](Images/SimpleExample-DroveToWorkDistrPlot.png)-->
 <center><img src="Images/SimpleExample-DroveToWorkDistrPlot.png" width="50%" height="50%"></center>
 
 
 
-As we saw in the cluster descriptions [above](#cluster-descriptions) there are clear differences between Manhattan and Staten Island when it comes to the percent of workers who drive to work. This is true both in the means (as shown as dotted lines), but also in the general distribution of the data. This plot shows us that in fact, many neighborhoods in Manhattan have next to no people driving to work at all, where as Staten Island has a sizeable number of neighborhoods with three-quarters or more of residents driving as a means of commuting.
+As we saw in the cluster descriptions [above](#cluster-descriptions) there are clear differences between Manhattan and Staten Island when it comes to the percent of people who drive to work. This is true both in the means (as shown with dotted lines), but also in the general distribution of the data. This plot shows us that in fact, many neighborhoods in Manhattan have next to no people driving to work at all, where as Staten Island has a sizeable number of Block Groups with three-quarters or more of residents driving as a means of commuting.
 
 A plot like this is created for each variable and helps to identify interesting additional stories in your data.
 
-<br/>
-<br/>
+<br>
+<br>
 
 #### Using Additional Function Parameters
 
-With this basic output in hand, let's run the function again and include our example clusters. To do this, we will add a couple of useful parameters to tell a deeper story.
-A complete list of parmeters can be found in the documentation, or by clicking [here](#all-function-parameters).
+If you have more than one cluster, or want to calculate cluster fit metrics, some additional useful parameters can tell a deeper story.
 
 ```{r}
-tmp_output <- c(
-  clusterData = NewYorkCityBoroughs # Your dataset
-  , uniqueID = "CensusBlockGroup" # A column of unique IDs for each row/observation
-  , clusterSolutions = c(
-    "BoroughName"
-    , "ExampleClusteringID_1"
-    , "ExampleClusteringID_2"
-    , "ExampleClusteringID_3"
-    , "ExampleClusteringID_4"
-    , "ExampleClusteringID_5"
-  ) # A list columns containing the group IDs
-  , dataColumns = c(
-    "PopulationDensity"
-    , "DroveToWork_percent"
-    , "BachelorsDegreeOrHigher_percent"
-    , "MarriedHouseholds_percent"
-    , "MedianAge"
-    , "MedianHouseholdIncome"
-    , "HouseholdsInPoverty_percent"
-    , "FamilyHouseholdsInPoverty_percent"
-    , "RepublicanVoters_percent"
-    , "DemocraticVoters_percent"
-    , "OtherVoters_percent"
-  ) # A list of columns containing the data to examine
-  , includeClusterFitMetrics = TRUE # We want to know how well our example clusters fit the data, so we will include cluster fit metrics
-  , clusterDistances = "" # To include cluster fit metrics we need to calculate distances between the points
-  , clusterSolutionsToFitMetricsOn = c(
-    "ExampleClusteringID_1"
-    , "ExampleClusteringID_2"
-    , "ExampleClusteringID_3"
-    , "ExampleClusteringID_4"
-    , "ExampleClusteringID_5"
-  ) # We do not want to include the actual Boroughs in our fit metrics, so we will leave them off this list
-)
+# NewYorkCityBoroughs_StandardizedDistances <- dist(NewYorkCityBoroughs_Standardized %>% select(
+#     PopulationDensity_std
+#     , DroveToWork_percent_std
+#     , BachelorsDegreeOrHigher_percent_std
+#     , MarriedHouseholds_percent_std
+#     , MedianAge_std
+#     , MedianHouseholdIncome_std
+#     , HouseholdsInPoverty_percent_std
+#     , FamilyHouseholdsInPoverty_percent_std
+#     , RepublicanVoters_percent_std
+#     , DemocraticVoters_percent_std
+#     , OtherVoters_percent_std
+#   )
+# , method = "euclidean") # 'dist()' run on the standardized data used to generate the cluster IDs used below
+
+
+# tmp_output <- describeClusters(
+#   clusterData = NewYorkCityBoroughs # Your dataset
+#   , uniqueID = "CensusBlockGroup" # A column of unique IDs for each row/observation
+#   , clusterSolutions = c(
+#     "BoroughName"
+#     , "ExampleClusteringID_1"
+#     , "ExampleClusteringID_2"
+#     , "ExampleClusteringID_3"
+#     , "ExampleClusteringID_4"
+#     , "ExampleClusteringID_5"
+#   ) # A list columns containing the group IDs
+#   , dataColumns = c(
+#     "PopulationDensity"
+#     , "DroveToWork_percent"
+#     , "BachelorsDegreeOrHigher_percent"
+#     , "MarriedHouseholds_percent"
+#     , "MedianAge"
+#     , "MedianHouseholdIncome"
+#     , "HouseholdsInPoverty_percent"
+#     , "FamilyHouseholdsInPoverty_percent"
+#     , "RepublicanVoters_percent"
+#     , "DemocraticVoters_percent"
+#     , "OtherVoters_percent"
+#   ) # A list of columns containing the data to examine
+#   , includeClusterFitMetrics = TRUE # We want to know how well our example clusters fit the data, so we will include cluster fit metrics
+#   , clusterDistances = NewYorkCityBoroughs_StandardizedDistances # To include cluster fit metrics we need to calculate distances between the points
+#   , clusterSolutionsToFitMetricsOn = c(
+#     "ExampleClusteringID_1"
+#     , "ExampleClusteringID_2"
+#     , "ExampleClusteringID_3"
+#     , "ExampleClusteringID_4"
+#     , "ExampleClusteringID_5"
+#   ) # We do not want to include the actual Boroughs in our fit metrics, so we will leave them off this list
+# )
 ```
 
+In adding multiple cluster solutions we have accessed some additional functionality provided by the *[describeClusters]* function.
 
+For example, the *Cluster Sizes* tab now has counts and proportions for all solution, but it also has a series of tables showing how the solutions relate to each other.
+
+There is also a table and a series of plots detailing how well our example clusters fit the structure of the data to help us choose which cluster solution we want to use going forward.
+
+Finally, a description tab has been generated for each of the solutions so we can now quickly examine the story each tells and decide if our clustering analysis is doing what we expect.
+
+<br>
 
 #### How Are Standardized Differences In Means Calculated
-Standardized Differences in Means are a way of looking at effect size, that is, to measure the strength of a relationship between variables. [Wikipedia](https://en.wikipedia.org/wiki/Effect_size) has a good overview of this subfield of statistics. **ClusterStories** uses the [Cohen's d metric](https://en.wikipedia.org/wiki/Effect_size#Cohen.27s_d), or the the difference in means between two populations, divided by the pooled variance. The pooled variance means we can combine the variability from two independent groups and use that to scale our effect size metric. In this analysis the two independent groups are the in-cluster observations versus all out-cluster observations.
+Standardized differences in means are a way of looking at effect size, that is, a way to measure the strength of a relationship between variables. **ClusterStories** uses the [Cohen's d metric](https://en.wikipedia.org/wiki/Effect_size#Cohen.27s_d), or the the difference in means between two populations, divided by the square root of the pooled variance. The pooled variance means we can combine the variability from two independent groups and use that to scale our effect size metric. In this analysis the two independent groups are the in-cluster observations versus all out-cluster observations.
 
 The equation for the effect size $d$ is:
 
 $$ d = \frac{\overline{x}_{1}-\overline{x}_{2}}{s} $$
-With pooled variance $s$:
+With denominator $s$:
 $$ s = \sqrt{\frac{({n}_{1}-1){s}_1^{2} + ({n}_{2}-1){s}_2^{2}} {{n}_{1} + {n}_{2} - 2}}$$
 
-Suggested interpretations of effect sizes magnitudes are shown below. The default for highlighting in **ClusterStories** is set to 0.5 for a 'medium' effect size. This can be changed in the *Parameters* tab in the Excel file.
+Suggested interpretations of effect size magnitudes are shown below. The default for highlighting in **ClusterStories** is set to 0.5 for a 'medium' effect size. This can be changed in the *Parameters* tab in the Excel file.
 
 <center><img src="Images/SimpleExample-CohensDMagnitudes.png" width="15%" height="15%"></center>
 
@@ -214,11 +236,36 @@ Suggested interpretations of effect sizes magnitudes are shown below. The defaul
  - [Wikipedia](https://en.wikipedia.org/wiki/Effect_size#Cohen.27s_d)
 
 
+<br>
+
+#### All Function Parameters
+##### *[describeClusters]* Parameters 
+
+* [clusterData] must be a data.frame
+* [uniqueID] is a column that uniquely identifies each row/observation. The parameter must be a single column number or name that is in [clusterData]
+* [clusterSolutions] is a list of columns containing discrete numerical or character values indicating the cluster groups. The parameter must be a list of column numbers only, or of column names only, that are in [clusterData]
+* [dataColumns] is a list of columns containing the data used to describe the clusters. The parameter must be a list of column numbers only, or of column names only, that are in [clusterData]
+* [exportOutput] bool; Set to TRUE if the information should be exported to Excel (Default: TRUE)
+* [exportDecimalPlaces] Must be a single number or a data.frame. Allows for control of formatting in Excel output (Default: 3)
+  - If [exportDecimalPlaces] is a number, all appropriate numbers in the Excel file will have that number of decimal places
+  - If [exportDecimalPlaces] is a data.frame, the following structure must be followed:
+    + Three columns: 'Variables', 'DataType', and 'DataDecimals'
+    + The first two rows in the first column must be 'Metrics' and 'Standard Mean Differences'
+    + After the first two rows, there must be a row for each of the variables in [DataColumns]
+    + The 'DataType' column indicates how the variable should be formatted. Values in this column can be "%", "$", or ""
+    + The 'DataDecimals' column indicates how many decmial digits to include in formatting. Must be less than or equal to 20
+* [exportPositiveNegativeSignificanceColors] sets the colors for significanctly positive/negative in the Excel output. The parameter must be a list of valid R colors (Default: c("#33F5B7", "#FCB099"))
+* [includeClusterFitMetrics] bool; Set to TRUE if cluster fit metrics should be calculated. REQUIRES distances for [clusterDistances] (Default: FALSE)
+* [clusterDistances] must be a list of distances from the 'dist()' function. Only used if cluster metrics are requested (Default: "")
+* [clusterFitMetrics] must be a list of possible outputs from the 'cluster.stats()' function in the {fpc} library. Valid entries are: n, cluster.number, min.cluster.size, noisen, average.between, average.within, n.between, n.within, max.diameter, min.separation, within.cluster.ss, avg.silwidth, g2, g3, pearsongamma, dunn, dunn2, entropy, wb.ratio, ch, widestgap, sindex, corrected.rand, vi. (Default: c("within.cluster.ss", "avg.silwidth", "ch", "wb.ratio"))
+* [clusterSolutionsToFitMetricsOn] allows clustering fit statistics to be run on a subset of given solutions only. The parameter must be left blank ("") or must be a set/subset of [clusterSolutions] (Default: "")
+* [includeClusterDescriptions] bool; Set to TRUE if cluster descriptions should be generated (Default: TRUE)
+* [includeDistributionPlots] bool; Set to TRUE if plots of variable distribution by cluster should be plotted (Default: TRUE)
+* [includeRadarPlots] bool; Set to TRUE if radar plots of variable means by cluster should be plotted (Default: FALSE)
+* [plotQuietly] bool; Set to TRUE if the plots should be not be plotted (Default: FALSE)
 
 
-### All Function Parameters
-*[describeClusters]* Parameters  
-*[describeObservation]* Parameters
+<br>
 
 ### Data Description and Sources
 
@@ -227,13 +274,13 @@ Variable Name | Type | Description | Short Source | Full Source
 CensusBlockGroup | String | A unique identifier for U.S. Census Block Groups | 2020 U.S. Census | U.S. Census Bureau (2024); TIGER/Line Shapefiles; Retrieved from: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
 BoroughName | String | New York City Borough names | Wikipedia | https://en.wikipedia.org/wiki/Boroughs_of_New_York_City
 BoroughID | Integer | New York City Borough numerical IDs | Generated | -
-ExampleClusteringID | Integer | An example cluster assignment (5 clusters) | Example clustering | Hierarchical clustering on standardized data using Euclidean distances
+ExampleClusteringID_# | Integer | An example cluster assignment (# of clusters) | Example clustering | Hierarchical clustering on standardized data using Euclidean distances
 PopulationDensity | Numeric | Population per square kilometer | U.S. Census - American Community Survey; Table B01003 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B01003 , 5-year Estimates; Retrieved from https://data.census.gov
 DroveToWork_percent | Percent | Percentage of workers 16 and older who did not work from home that drove to work | U.S. Census - American Community Survey; Table B08134 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B08134, 5-year Estimates; Retrieved from https://data.census.gov
 BachelorsDegreeOrHigher_percent | Percent | Percentage of people 25 years and older who have a Bachelor's degree or higher | U.S. Census - American Community Survey; Table B15003 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B15003, 5-year Estimates; Retrieved from https://data.census.gov
 MarriedHouseholds_percent | Percent | Percentage of households occupied by a married couple | U.S. Census - American Community Survey; Table B09019 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B09019, 5-year Estimates; Retrieved from https://data.census.gov
-MedianAge | Numeric | Median age | U.S. Census - American Community Survey; Table B01002 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B01002, 5-year Estimates; Retrieved from https://data.census.gov
-MedianHouseholdIncome | Numeric | Median household income | U.S. Census - American Community Survey; Table B19049 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B19049, 5-year Estimates; Retrieved from https://data.census.gov
+MedianAge | Numeric | Median age (years) | U.S. Census - American Community Survey; Table B01002 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B01002, 5-year Estimates; Retrieved from https://data.census.gov
+MedianHouseholdIncome | Numeric | Median household income (USD) | U.S. Census - American Community Survey; Table B19049 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B19049, 5-year Estimates; Retrieved from https://data.census.gov
 HouseholdsInPoverty_percent | Percent | Percentage of households in poverty | U.S. Census - American Community Survey; Table B17017 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B17017, 5-year Estimates; Retrieved from https://data.census.gov
 FamilyHouseholdsInPoverty_percent | Percent | Percentage of households in poverty that are occupied by families | U.S. Census - American Community Survey; Table B17017 | U.S. Census Bureau (2024); 2016-2020 American Community Survey, Table B17017, 5-year Estimates; Retrieved from https://data.census.gov
 RepublicanVoters_percent | Percent | Percentage of votes cast in 2020 for Republican presidential candidate Donald Trump | An Extremely Detailed Map of the 2020 Election; By Alice Park, Charlie Smart, Rumsey Taylor, and Miles Watkins | Alice Park, Charlie Smart, Rumsey Taylor, and Miles Watkins. "An Extremely Detailed Map of the 2020 Election" New York Times, March 30, 2024, https://www.nytimes.com/interactive/2021/upshot/2020-election-map.html
@@ -249,10 +296,12 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+<br>
 
 ### Example Clustering
-This clustering was done using Hierarchical clustering on [standardized data](#standardized-data) using Euclidean distance.
+This clustering was done using hierarchical clustering on [standardized data](#standardized-data) using Euclidean distance.
 
+<br>
 
 ### Standardized Data
 ```{r, echo = T, include=F}
@@ -265,23 +314,3 @@ The data below was standardized using the 'scale()' function. This changes each 
 ```{r}
 head(NewYorkCityBoroughs_Standardized)
 ```
-
-
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

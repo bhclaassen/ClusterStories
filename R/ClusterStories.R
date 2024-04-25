@@ -371,7 +371,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   # - [clusterSolutions] must be a list of column numbers only, or of column names only, that are in [clusterData]
   # - [dataColumns] must be a list of column numbers only, or of column names only, that are in [clusterData]
   # - [exportOutput] bool; Set to TRUE if the information should be exported to Excel (Default: TRUE)
-  # - [exportDecimalPlaces] Must be a single number or a data.frame Allows for control of formatting in Excel output (Default: 3)
+  # - [exportDecimalPlaces] Must be a single number or a data.frame. Allows for control of formatting in Excel output (Default: 3)
   #       If [exportDecimalPlaces] is a data.frame, the following structure must be followed:
   #           -
   #           -
@@ -388,7 +388,7 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
   # - [includeClusterDescriptions] bool; Set to TRUE if cluster descriptions should be generated (Default: TRUE)
   # - [includeDistributionPlots] bool; Set to TRUE if plots of variable distribution by cluster should be plotted (Default: TRUE)
   # - [includeRadarPlots] bool; Set to TRUE if radar plots of variable means by cluster should be plotted (Default: FALSE)
-  # - [plotQuietly] bool; Set to TRUE if the plots should be not be plotted (Default: TRUE)
+  # - [plotQuietly] bool; Set to TRUE if the plots should be not be plotted (Default: FALSE)
 
   require(tidyverse)
 
