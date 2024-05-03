@@ -226,8 +226,8 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
       # Initialize storage for current cluster ID within current cluster solution
       tmp_clusterProportions <- as.data.frame(matrix(, 1, 5)) # Cluster size and proportion
       names(tmp_clusterProportions) <- c("Cluster Number", "Total Number of Clusters", "Number of Observations", "Proportion", "Original ID")
-      tmp_clusterVarDescriptions <- as.data.frame(matrix(, tmp_numVariables, 6)) # Cluster variables description (rows: num variables, cols: 5 metrics)
-      names(tmp_clusterVarDescriptions) <- c("Variable", "Mean", "Mean Diff", "Std Mean Diff", "Pooled Std Dev", "Out-Cluster Mean")
+      tmp_clusterVarDescriptions <- as.data.frame(matrix(, tmp_numVariables, 7)) # Cluster variables description (rows: num variables, cols: 5 metrics)
+      names(tmp_clusterVarDescriptions) <- c("Variable", "Mean", "Mean Diff", "Std Mean Diff", "Pooled Std Dev", "Out-Cluster Mean", "InClusterStdDev")
 
       ## Fill in description
       tmp_currentClusterTable <- table(descr_clusterData[, tmp_clustSolution])
@@ -306,6 +306,11 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
       tmp_clusterVarDescriptions[,6] <- sapply( # Vector of means for each variable in out-cluster data
           tmp_outClusterStdDiffData, FUN = function(x) {mean(x, na.rm = T)}
         )
+
+      # In-Cluster Standard Deviations
+      tmp_clusterVarDescriptions[,7] <- sapply( # Vector of std devs for each variable in in-cluster data
+        tmp_inClusterStdDiffData, FUN = function(x) {sd(x, na.rm = T)}
+      )
 
       # Sort by strength of standard mean differences
       tmp_clusterVarDescriptions <- tmp_clusterVarDescriptions[order(tmp_clusterVarDescriptions[,"Std Mean Diff"], decreasing =  T), ]
@@ -1593,63 +1598,63 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
 
 # -------------------------------------------------------------------------
-tmpClusterDescription <- clusterStory
-setwd("/Users/benclaassen/Documents/_Workshop/_Code Utilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Output")
-# save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
-load(file = "tmpClusterDescriptionObject.Rda")
-
-
-observationID <- "360610239001"
-clusterDescriptions <- tmpClusterDescription
-clusterSolutionsSubset = ""
-
-# describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
-# {
-
-  # Input checks ----------------------------------------------------------
-
-  # [clusterDescriptions]
-  #   - must be formatted like an output from the ClusterStories [describeClusters] function
-  #      - list class
-  #      - length 5
-  #      - Entry [[1]] matches 'key' format
-  #      - Entry [[2]] has an entry for each of the 6 levels
-  #      - Entry [[3]] is non-empty
-  #      - Entry [[3]] (data) must have unique ID field given in [[2]]
-  #      - Entry [[3]] (data) must have cluster solution field(s) given in [[2]]
-  #      - Entries [4,5]] are non-empty if calculated
-  #   -
-
-  # [observationID]
-  #   - must be an entry in [uniqueID] column for 'Cluster data'
-
-  # [clusterSolutionsSubset]
-  #   - must be blank
-  #   ~OR~
-  #   - must be column names in 'Cluster data' and a character vector list
-
-
-
-  # Begin observation description -----------------------------------------
-
-  # Pull unique ID from [clusterDescriptions] object
-  tmp_uniqueID <- clusterDescriptions[[2]][[1]][2]
-
-  # Pull observation to compare from cluster data in the [clusterDescriptions] object
-  # tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueID] == observationID),]
-  tmp_obsData <- clusterDescriptions[[3]] %>% filter(!!as.symbol(tmp_uniqueID) == observationID)
-
-  # Set clustering solutions
-  if(clusterSolutionsSubset == "")
-  {
-    tmp_clusterSolutions <- clusterDescriptions[[2]][[3]][-1]
-  } else
-  {
-    tmp_clusterSolutions <- clusterSolutionsSubset
-  }
-
-
-
-# } ## END FUNCTION [describeObservation] ##
-
-
+# tmpClusterDescription <- clusterStory
+# setwd("/Users/benclaassen/Documents/_Workshop/_CodeUtilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Output")
+# # save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
+# load(file = "tmpClusterDescriptionObject.Rda")
+#
+#
+# observationID <- "360610239001"
+# clusterDescriptions <- tmpClusterDescription
+# clusterSolutionsSubset = ""
+#
+# # describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
+# # {
+#
+#   # Input checks ----------------------------------------------------------
+#
+#   # [clusterDescriptions]
+#   #   - must be formatted like an output from the ClusterStories [describeClusters] function
+#   #      - list class
+#   #      - length 5
+#   #      - Entry [[1]] matches 'key' format
+#   #      - Entry [[2]] has an entry for each of the 6 levels
+#   #      - Entry [[3]] is non-empty
+#   #      - Entry [[3]] (data) must have unique ID field given in [[2]]
+#   #      - Entry [[3]] (data) must have cluster solution field(s) given in [[2]]
+#   #      - Entries [4,5]] are non-empty if calculated
+#   #   -
+#
+#   # [observationID]
+#   #   - must be an entry in [uniqueID] column for 'Cluster data'
+#
+#   # [clusterSolutionsSubset]
+#   #   - must be blank
+#   #   ~OR~
+#   #   - must be column names in 'Cluster data' and a character vector list
+#
+#
+#
+#   # Begin observation description -----------------------------------------
+#
+#   # Pull unique ID from [clusterDescriptions] object
+#   tmp_uniqueID <- clusterDescriptions[[2]][[1]][2]
+#
+#   # Pull observation to compare from cluster data in the [clusterDescriptions] object
+#   # tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueID] == observationID),]
+#   tmp_obsData <- clusterDescriptions[[3]] %>% filter(!!as.symbol(tmp_uniqueID) == observationID)
+#
+#   # Set clustering solutions
+#   if(clusterSolutionsSubset == "")
+#   {
+#     tmp_clusterSolutions <- clusterDescriptions[[2]][[3]][-1]
+#   } else
+#   {
+#     tmp_clusterSolutions <- clusterSolutionsSubset
+#   }
+#
+#
+#
+# # } ## END FUNCTION [describeObservation] ##
+#
+#
