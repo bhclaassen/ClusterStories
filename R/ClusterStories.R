@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-04-24
+# Updated: 2024-05-03
 # -------------------------------------------------------------------------
 
 
@@ -1559,10 +1559,10 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
       , "[[5]] - Cluster fit metrics (if calculated)"
     )
     , list(
-      c("Unique ID field : ", uniqueID)
+      c("Unique ID field: ", uniqueID)
       , c("Number of cluster solutions: ", length(clusterSolutions))
-      , c("Cluster solution(s) : ", clusterSolutions)
-      , c("Data column(s) : ", dataColumns)
+      , c("Cluster solution(s): ", clusterSolutions)
+      , c("Data column(s): ", dataColumns)
       , c("Descriptions included: ", FALSE)
       , c("Metrics included: ", FALSE)
     )
@@ -1591,27 +1591,65 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
 } ## END FUNCTION [createClusterDescriptions] ##
 
-#
-# # -------------------------------------------------------------------------
-# tmpClusterDescription <- tmp_clusterInfoOutput
-# # save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
-# load(file = "tmpClusterDescriptionObject.Rda")
 
-#
-# observationID <- "360610089001"
-# clusterDescriptions <- foo
-# clusterSolutionsSubset = ""
-#
-# # describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
-# # {
-#     # Pull unique ID from [clusterDescriptions] object
-#     tmp_uniqueID <- clusterDescriptions[[2]][[1]][2]
-#
-#     # Pull observation to compare from cluster data in the [clusterDescriptions] object
-#     tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueID] == observationID),]
-#     # clusterDescriptions[[3]] %>% filter(tmp_uniqueID == observationID)
-#
-#
-# # } ## END FUNCTION [describeObservation] ##
+# -------------------------------------------------------------------------
+tmpClusterDescription <- clusterStory
+setwd("/Users/benclaassen/Documents/_Workshop/_Code Utilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Output")
+# save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
+load(file = "tmpClusterDescriptionObject.Rda")
+
+
+observationID <- "360610239001"
+clusterDescriptions <- tmpClusterDescription
+clusterSolutionsSubset = ""
+
+# describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
+# {
+
+  # Input checks ----------------------------------------------------------
+
+  # [clusterDescriptions]
+  #   - must be formatted like an output from the ClusterStories [describeClusters] function
+  #      - list class
+  #      - length 5
+  #      - Entry [[1]] matches 'key' format
+  #      - Entry [[2]] has an entry for each of the 6 levels
+  #      - Entry [[3]] is non-empty
+  #      - Entry [[3]] (data) must have unique ID field given in [[2]]
+  #      - Entry [[3]] (data) must have cluster solution field(s) given in [[2]]
+  #      - Entries [4,5]] are non-empty if calculated
+  #   -
+
+  # [observationID]
+  #   - must be an entry in [uniqueID] column for 'Cluster data'
+
+  # [clusterSolutionsSubset]
+  #   - must be blank
+  #   ~OR~
+  #   - must be column names in 'Cluster data' and a character vector list
+
+
+
+  # Begin observation description -----------------------------------------
+
+  # Pull unique ID from [clusterDescriptions] object
+  tmp_uniqueID <- clusterDescriptions[[2]][[1]][2]
+
+  # Pull observation to compare from cluster data in the [clusterDescriptions] object
+  # tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueID] == observationID),]
+  tmp_obsData <- clusterDescriptions[[3]] %>% filter(!!as.symbol(tmp_uniqueID) == observationID)
+
+  # Set clustering solutions
+  if(clusterSolutionsSubset == "")
+  {
+    tmp_clusterSolutions <- clusterDescriptions[[2]][[3]][-1]
+  } else
+  {
+    tmp_clusterSolutions <- clusterSolutionsSubset
+  }
+
+
+
+# } ## END FUNCTION [describeObservation] ##
 
 
