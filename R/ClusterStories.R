@@ -1604,25 +1604,30 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
 # -------------------------------------------------------------------------
 # tmpClusterDescription <- clusterStory
-setwd("/Users/benclaassen/Documents/_Workshop/_CodeUtilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Output")
+# setwd("/Users/benclaassen/Documents/_Workshop/_CodeUtilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Output")
 # save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
-load(file = "tmpClusterDescriptionObject.Rda")
+# load(file = "tmpClusterDescriptionObject.Rda")
 
 
-observationID <- "360610239001"
-clusterDescriptions <- tmpClusterDescription
-clusterSolution <- "ExampleClusteringID_2"
+# observationID <- "360610078002"
+# clusterDescriptions <- tmpClusterDescription
+# # clusterSolution <- "ExampleClusteringID_2"
+# clusterSolution <- "BoroughName"
 
-# describeObservations <- function(observationIDs, clusterDescriptions, clusterSolution)
-# {
+describeObservations <- function(clusterDescriptions, observationIDs, clusterSolution, decimalPlaces = 3)
+{
 
   # Function returns a data.frame for each given observation detailing:
-  #   - Observation ID
-  #   - Observation Values
-  #   - Cluster number w/in each solution (cluster x of n)
-  #   - Mean by variable for that solution and cluster
-  #   - Standard deviation by variable for that solution and cluster
-  #   - Number of standard deviations from the mean the observation value is
+  #   - [ObservationID]: Observation ID
+  #   - [ClusterID]: Observation cluster name
+  #   - [ClusterInfo]: Cluster number w/in each solution ("Cluster [x] of [n]")
+  #   - [Variables]: Variable names
+  #   - [ObservationValues]: Observation values
+  #   - [ClusterMean]: Mean by variable for that solution and cluster
+  #   - [ClusterStdDev]: Standard deviation by variable for that solution and cluster
+  #   - [Observation_DifferenceFromClusterMean]: Difference in observation values from the cluster mean
+  #   - [Observation_DifferenceFromClusterMean_StdDevs]: Number of standard deviations from the cluster (Difference in observation values from the cluster mean divided by std devs for that variable)
+  #   - [Observation_PercentDifferenceClusterMean]: Percent difference from cluster mean (diff/cluster mean value)
 
 
   # Libraries -------------------------------------------------------------
@@ -1662,18 +1667,87 @@ clusterSolution <- "ExampleClusteringID_2"
   # tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueIDField] == observationID),]
   tmp_obsData <- clusterDescriptions[[3]] %>% filter(!!as.symbol(tmp_uniqueIDField) == observationID) %>% select(all_of(tmp_columnsToKeep))
 
-  # Pull total number of clusters in [clusterSolution]
-  tmp_numTotalClusters <- clusterDescriptions[[4]]
+  # Set cluster number for obs
+  tmp_obsClusterID <- unlist(tmp_obsData %>% select(all_of(clusterSolution)))
 
+  # Pull cluster info for [clusterSolution] for [tmp_obsClusterID]
+  tmp_clusterSolutionOrderNumber <- which(clusterDescriptions[[2]][[3]][-1] == clusterSolution) # Set which entry in [clusterDescriptions][[4]] list is given cluster solution. This works because the order stored in [clusterDescriptions][[2]][[3]][-1] is the same as is passed to the [createClusterDescriptions] descritptions generation function
+  tmp_clusterSolutionInfo <- clusterDescriptions[[4]][[tmp_clusterSolutionOrderNumber]] # Pull info for whole cluster sol'n
+
+  # Iterate through each cluster in sol'n to get number for current cluster ID [tmp_obsClusterID]
+  for(tmp_clusters in 1:length(tmp_clusterSolutionInfo))
+  {
+    tmp_currentClusterID <- tmp_clusterSolutionInfo[[tmp_clusters]][[1]][5] # Pull 'Original ID' from current cluster information
+
+    if(tmp_currentClusterID == tmp_obsClusterID) # If cluster IDs match, pull cluster number from info
+    {
+      tmp_clusterNumber <- unlist(tmp_clusterSolutionInfo[[tmp_clusters]][[1]][1]) # Set [tmp_clusterNumber] to number of cluster in solution
+      break # Exit loop once ID is found
+    }
+  }
+
+  tmp_clusterInfo <- tmp_clusterSolutionInfo[[tmp_clusterNumber]]
+
+  # Confirm right solution is pulled
+  if(clusterSolution != unlist(tmp_clusterInfo[[1]][6]))
+  {
+    stop("[clusterDescriptions] object corrupted. Cluster solution names in improper order.")
+  }
 
   # Fill output -----------------------------------------------------------
+
   # Initialize output
-  tmp_obsDescription <- as.data.frame(matrix(,,))
+  tmp_obsDescription <- as.data.frame(matrix(
+    , (dim(tmp_obsData)[2] - 2) # Rows = number of variables, i.e. 2 fewer than the number of columns in [tmp_obsData]; OR data in [tmp_obsData] except ID and Cluster Number
+    , 10)) # 10 columns, see names immediately below
+  names(tmp_obsDescription) <- c("ObservationID", "ClusterID", "ClusterInfo", "Variables", "ObservationValues", "ClusterMean", "ClusterStdDev", "Observation_DifferenceFromClusterMean", "Observation_DifferenceFromClusterMean_StdDevs", "Observation_PercentDifferenceClusterMean")
 
 
-  clusterDescriptions[[4]][[2]][[1]]
+  # Set [ObservationID]
+  tmp_obsDescription$ObservationID <- observationID
+
+  # Set [ClusterID]
+  tmp_obsDescription$ClusterID <- tmp_obsClusterID
+
+  # Set [ClusterInfo]
+  tmp_obsDescription$ClusterInfo <- paste0("Cluster ", tmp_clusterInfo[[1]][1], " of ", tmp_clusterInfo[[1]][2])
+
+  # Set [Variables]
+  tmp_obsDescription$Variables <- names(tmp_obsData)[-c(1:2)]
+
+  # Set [ObservationValues]
+  tmp_obsDescription$ObservationValues <- round(unlist(tmp_obsData[1, -c(1:2)]), decimalPlaces)
 
 
-# } ## END FUNCTION [describeObservation] ##
+  # Pull cluster var info
+  tmp_clusterMeansAndStdDevs <- tmp_clusterInfo[[2]] %>% select(Variable, Mean, InClusterStdDev)
+  names(tmp_clusterMeansAndStdDevs)[1] <- "Variables"
+  tmp_clusterMeansAndStdDevs <- left_join(tmp_obsDescription[,4:5], tmp_clusterMeansAndStdDevs, by = "Variables") # Join cluster means to ensure that variable order is maintained
+
+  # Set [ClusterMean]
+  tmp_obsDescription$ClusterMean <- round(unlist(tmp_clusterMeansAndStdDevs$Mean), decimalPlaces)
+
+  # Set [ClusterStdDev]
+  tmp_obsDescription$ClusterStdDev <- round(unlist(tmp_clusterMeansAndStdDevs$InClusterStdDev), decimalPlaces)
+
+  # Set [Observation_DifferenceFromClusterMean]
+  tmp_obsDescription$Observation_DifferenceFromClusterMean <- round( (tmp_obsDescription$ObservationValues - tmp_obsDescription$ClusterMean), decimalPlaces)
+
+  # Set [Observation_DifferenceFromClusterMean_StdDevs]
+  tmp_obsDescription$Observation_DifferenceFromClusterMean_StdDevs <- round( (tmp_obsDescription$Observation_DifferenceFromClusterMean / tmp_obsDescription$ClusterStdDev), decimalPlaces)
+
+  # Set [Observation_PercentDifferenceClusterMean]
+  tmp_obsDescription$Observation_PercentDifferenceClusterMean <- round( (tmp_obsDescription$Observation_DifferenceFromClusterMean / tmp_obsDescription$ClusterMean), decimalPlaces)
+
+  print.tmp_obsDescription <-
+
+  # Return observation description
+  return(tmp_obsDescription)
+
+} ## END FUNCTION [describeObservation] ##
 
 
+
+
+# foo <-
+# describeObservations(tmpClusterDescription, "360610078002", "BoroughName")
