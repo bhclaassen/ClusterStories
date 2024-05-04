@@ -14,7 +14,7 @@
 # BHC
 
 # Started: 2024-03-08
-# Updated: 2024-05-03
+# Updated: 2024-05-04
 # -------------------------------------------------------------------------
 
 
@@ -218,14 +218,16 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
   # Create a description for each solution
   for(tmp_clustSolution in descr_clusterSolutions)
   {
+    # tmp_clustSolution = descr_clusterSolutions[1] # DELETE
+
     print(paste0("Generating cluster descriptions for solution [", tmp_clustSolution,"]"))
 
     # Iterate over each group in the current solution
     for(tmp_currentCluster in 1:length(table(descr_clusterData[, tmp_clustSolution])) )
     {
       # Initialize storage for current cluster ID within current cluster solution
-      tmp_clusterProportions <- as.data.frame(matrix(, 1, 5)) # Cluster size and proportion
-      names(tmp_clusterProportions) <- c("Cluster Number", "Total Number of Clusters", "Number of Observations", "Proportion", "Original ID")
+      tmp_clusterProportions <- as.data.frame(matrix(, 1, 6)) # Cluster size and proportion
+      names(tmp_clusterProportions) <- c("Cluster Number", "Total Number of Clusters", "Number of Observations", "Proportion", "Original ID", "Cluster Solution Name")
       tmp_clusterVarDescriptions <- as.data.frame(matrix(, tmp_numVariables, 7)) # Cluster variables description (rows: num variables, cols: 5 metrics)
       names(tmp_clusterVarDescriptions) <- c("Variable", "Mean", "Mean Diff", "Std Mean Diff", "Pooled Std Dev", "Out-Cluster Mean", "InClusterStdDev")
 
@@ -241,6 +243,9 @@ createClusterDescriptions <- function(descr_clusterData, descr_clusterSolutions,
       tmp_clusterProportions[1,4] <- tmp_currentClusterTable[tmp_currentCluster] / sum(tmp_currentClusterTable)
       # Original cluster number/name
       tmp_clusterProportions[1,5] <- names(tmp_currentClusterTable)[tmp_currentCluster]
+      # Original cluster solution name
+      tmp_clusterProportions[1,6] <- tmp_clustSolution
+
 
       # Pull out variables in [descr_dataColumns] for current cluster ID within the current cluster solution
       tmp_inClusterStdDiffData <- descr_clusterData[which(descr_clusterData[,tmp_clustSolution] == tmp_clusterProportions[1,5]), ] %>% select(all_of(descr_dataColumns))
@@ -1599,62 +1604,76 @@ describeClusters <- function(clusterData, uniqueID, clusterSolutions, dataColumn
 
 # -------------------------------------------------------------------------
 # tmpClusterDescription <- clusterStory
-# setwd("/Users/benclaassen/Documents/_Workshop/_CodeUtilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Output")
-# # save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
-# load(file = "tmpClusterDescriptionObject.Rda")
-#
-#
-# observationID <- "360610239001"
-# clusterDescriptions <- tmpClusterDescription
-# clusterSolutionsSubset = ""
-#
-# # describeObservation <- function(observationID, clusterDescriptions, clusterSolutionsSubset = "")
-# # {
-#
-#   # Input checks ----------------------------------------------------------
-#
-#   # [clusterDescriptions]
-#   #   - must be formatted like an output from the ClusterStories [describeClusters] function
-#   #      - list class
-#   #      - length 5
-#   #      - Entry [[1]] matches 'key' format
-#   #      - Entry [[2]] has an entry for each of the 6 levels
-#   #      - Entry [[3]] is non-empty
-#   #      - Entry [[3]] (data) must have unique ID field given in [[2]]
-#   #      - Entry [[3]] (data) must have cluster solution field(s) given in [[2]]
-#   #      - Entries [4,5]] are non-empty if calculated
-#   #   -
-#
-#   # [observationID]
-#   #   - must be an entry in [uniqueID] column for 'Cluster data'
-#
-#   # [clusterSolutionsSubset]
-#   #   - must be blank
-#   #   ~OR~
-#   #   - must be column names in 'Cluster data' and a character vector list
-#
-#
-#
-#   # Begin observation description -----------------------------------------
-#
-#   # Pull unique ID from [clusterDescriptions] object
-#   tmp_uniqueID <- clusterDescriptions[[2]][[1]][2]
-#
-#   # Pull observation to compare from cluster data in the [clusterDescriptions] object
-#   # tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueID] == observationID),]
-#   tmp_obsData <- clusterDescriptions[[3]] %>% filter(!!as.symbol(tmp_uniqueID) == observationID)
-#
-#   # Set clustering solutions
-#   if(clusterSolutionsSubset == "")
-#   {
-#     tmp_clusterSolutions <- clusterDescriptions[[2]][[3]][-1]
-#   } else
-#   {
-#     tmp_clusterSolutions <- clusterSolutionsSubset
-#   }
-#
-#
-#
-# # } ## END FUNCTION [describeObservation] ##
-#
-#
+setwd("/Users/benclaassen/Documents/_Workshop/_CodeUtilities/Statistics/MultivariateDescriptionsPackage/Example Data/NYC Boroughs Example/Output")
+# save(tmpClusterDescription, file = "tmpClusterDescriptionObject.Rda")
+load(file = "tmpClusterDescriptionObject.Rda")
+
+
+observationID <- "360610239001"
+clusterDescriptions <- tmpClusterDescription
+clusterSolution <- "ExampleClusteringID_2"
+
+# describeObservations <- function(observationIDs, clusterDescriptions, clusterSolution)
+# {
+
+  # Function returns a data.frame for each given observation detailing:
+  #   - Observation ID
+  #   - Observation Values
+  #   - Cluster number w/in each solution (cluster x of n)
+  #   - Mean by variable for that solution and cluster
+  #   - Standard deviation by variable for that solution and cluster
+  #   - Number of standard deviations from the mean the observation value is
+
+
+  # Libraries -------------------------------------------------------------
+  require(tidyverse)
+
+
+  # Input checks ----------------------------------------------------------
+
+  # [clusterDescriptions]
+  #   - must be formatted like an output from the ClusterStories [describeClusters] function
+  #      - list class
+  #      - length 5
+  #      - Entry [[1]] matches 'key' format
+  #      - Entry [[2]] has an entry for each of the 6 levels
+  #      - Entry [[3]] is non-empty
+  #      - Entry [[3]] (data) must have unique ID field given in [[2]]
+  #      - Entry [[3]] (data) must have cluster solution field(s) given in [[2]]
+  #      - Entries [4,5]] are non-empty if calculated
+  #   -
+
+  # [observationIDs]
+  #   - each must be an entry in [uniqueID] column for 'Cluster data'
+
+  # [clusterSolution]
+  #   - must be a single column name in 'Cluster data'
+  #   - must be a character
+
+
+
+  # Begin observation description -----------------------------------------
+
+  # Pull unique ID from [clusterDescriptions] object
+  tmp_uniqueIDField <- clusterDescriptions[[2]][[1]][2]
+
+  # Pull observation to compare from cluster data in the [clusterDescriptions] object
+  tmp_columnsToKeep <- c(tmp_uniqueIDField, clusterSolution, clusterDescriptions[[2]][[4]][-1])
+  # tmp_obsData <- clusterDescriptions[[3]][which(clusterDescriptions[[3]][, tmp_uniqueIDField] == observationID),]
+  tmp_obsData <- clusterDescriptions[[3]] %>% filter(!!as.symbol(tmp_uniqueIDField) == observationID) %>% select(all_of(tmp_columnsToKeep))
+
+  # Pull total number of clusters in [clusterSolution]
+  tmp_numTotalClusters <- clusterDescriptions[[4]]
+
+
+  # Fill output -----------------------------------------------------------
+  # Initialize output
+  tmp_obsDescription <- as.data.frame(matrix(,,))
+
+
+  clusterDescriptions[[4]][[2]][[1]]
+
+
+# } ## END FUNCTION [describeObservation] ##
+
+
